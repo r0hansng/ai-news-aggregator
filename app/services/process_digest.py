@@ -1,5 +1,3 @@
-from typing import Optional
-import logging
 import sys
 from pathlib import Path
 
@@ -8,15 +6,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from app.agent.digest_agent import DigestAgent
 from app.database.repository import Repository
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger(__name__)
-
-
-def process_digests(limit: Optional[int] = None) -> dict:
+def process_digests(limit=None):
     agent = DigestAgent()
     repo = Repository()
     
@@ -25,41 +15,42 @@ def process_digests(limit: Optional[int] = None) -> dict:
     processed = 0
     failed = 0
     
-    logger.info(f"Starting digest processing for {total} articles")
+    print(f"Starting digest processing for {total} articles")
     
     for idx, article in enumerate(articles, 1):
         article_type = article["type"]
         article_id = article["id"]
-        article_title = article["title"][:60] + "..." if len(article["title"]) > 60 else article["title"]
+        title = article["title"]
+        short_title = title[:60] + "..." if len(title) > 60 else title
         
-        logger.info(f"[{idx}/{total}] Processing {article_type}: {article_title} (ID: {article_id})")
+        print(f"[{idx}/{total}] Processing {article_type}: {short_title} (ID: {article_id})")
         
         try:
-            digest_result = agent.generate_digest(
-                title=article["title"],
+            digest = agent.generate_digest(
+                title=title,
                 content=article["content"],
                 article_type=article_type
             )
             
-            if digest_result:
+            if digest:
                 repo.create_digest(
                     article_type=article_type,
                     article_id=article_id,
                     url=article["url"],
-                    title=digest_result.title,
-                    summary=digest_result.summary,
+                    title=digest.title,
+                    summary=digest.summary,
                     published_at=article.get("published_at")
                 )
                 processed += 1
-                logger.info(f"✓ Successfully created digest for {article_type} {article_id}")
+                print(f"✓ Created digest for {article_type} {article_id}")
             else:
                 failed += 1
-                logger.warning(f"✗ Failed to generate digest for {article_type} {article_id}")
+                print(f"✗ Failed to generate digest for {article_type} {article_id}")
         except Exception as e:
             failed += 1
-            logger.error(f"✗ Error processing {article_type} {article_id}: {e}")
+            print(f"✗ Error processing {article_type} {article_id}: {e}")
     
-    logger.info(f"Processing complete: {processed} processed, {failed} failed out of {total} total")
+    print(f"Done: {processed} processed, {failed} failed out of {total}")
     
     return {
         "total": total,
@@ -67,9 +58,7 @@ def process_digests(limit: Optional[int] = None) -> dict:
         "failed": failed
     }
 
-
 if __name__ == "__main__":
     result = process_digests()
-    print(f"Total articles: {result['total']}")
-    print(f"Processed: {result['processed']}")
-    print(f"Failed: {result['failed']}")
+    print(f"Total: {result['total']} | Processed: {result['processed']} | Failed: {result['failed']}")
+

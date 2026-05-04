@@ -126,26 +126,26 @@ def markdown_to_html(markdown_text: str) -> str:
 </html>"""
 
 
-def digest_to_html(digest_response) -> str:
-    from app.agent.email_agent import EmailDigestResponse
-    
-    if not isinstance(digest_response, EmailDigestResponse):
-        return markdown_to_html(digest_response.to_markdown() if hasattr(digest_response, 'to_markdown') else str(digest_response))
-    
+def digest_to_html(digest) -> str:
+    from app.agent.email_agent import EmailDigest
+
+    if not isinstance(digest, EmailDigest):
+        return markdown_to_html(digest.to_markdown() if hasattr(digest, 'to_markdown') else str(digest))
+
     html_parts = []
-    greeting_html = markdown.markdown(digest_response.introduction.greeting, extensions=['extra', 'nl2br'])
-    introduction_html = markdown.markdown(digest_response.introduction.introduction, extensions=['extra', 'nl2br'])
+    greeting_html = markdown.markdown(digest.intro.greeting, extensions=['extra', 'nl2br'])
+    intro_html = markdown.markdown(digest.intro.introduction, extensions=['extra', 'nl2br'])
     html_parts.append(f'<div class="greeting">{greeting_html}</div>')
-    html_parts.append(f'<div class="introduction">{introduction_html}</div>')
+    html_parts.append(f'<div class="introduction">{intro_html}</div>')
     html_parts.append('<hr>')
-    
-    for article in digest_response.articles:
+
+    for article in digest.articles:
         html_parts.append(f'<h3>{html.escape(article.title)}</h3>')
         summary_html = markdown.markdown(article.summary, extensions=['extra', 'nl2br'])
         html_parts.append(f'<div>{summary_html}</div>')
         html_parts.append(f'<p><a href="{html.escape(article.url)}" class="article-link">Read more →</a></p>')
         html_parts.append('<hr>')
-    
+
     html_content = '\n'.join(html_parts)
     
     return f"""<!DOCTYPE html>

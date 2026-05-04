@@ -3,18 +3,18 @@ import json
 from datetime import datetime
 from typing import List, Optional
 from openai import OpenAI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
-class EmailIntroduction(BaseModel):
-    greeting: str = Field(description="Personalized greeting with user's name and date")
-    introduction: str = Field(description="2-3 sentence overview of what's in the top 10 ranked articles")
+class EmailIntro(BaseModel):
+    greeting: str
+    introduction: str
 
 
-class RankedArticleDetail(BaseModel):
+class ArticleDetail(BaseModel):
     digest_id: str
     rank: int
     relevance_score: float
@@ -25,41 +25,22 @@ class RankedArticleDetail(BaseModel):
     reasoning: Optional[str] = None
 
 
-class EmailDigestResponse(BaseModel):
-    introduction: EmailIntroduction
-    articles: List[RankedArticleDetail]
+class EmailDigest(BaseModel):
+    intro: EmailIntro
+    articles: List[ArticleDetail]
     total_ranked: int
     top_n: int
 
     def to_markdown(self) -> str:
-        markdown = f"{self.introduction.greeting}\n\n"
-        markdown += f"{self.introduction.introduction}\n\n"
-        markdown += "---\n\n"
-
-        for article in self.articles:
-            markdown += f"## {article.title}\n\n"
-            markdown += f"{article.summary}\n\n"
-            markdown += f"[Read more →]({article.url})\n\n"
-            markdown += "---\n\n"
-
-        return markdown
+        out = f"{self.intro.greeting}\n\n{self.intro.introduction}\n\n---\n\n"
+        for a in self.articles:
+            out += f"## {a.title}\n\n{a.summary}\n\n[Read more →]({a.url})\n\n---\n\n"
+        return out
 
 
-class EmailDigest(BaseModel):
-    introduction: EmailIntroduction
-    ranked_articles: List[dict] = Field(description="Top 10 ranked articles with their details")
-
-
-EMAIL_PROMPT = """You are an expert email writer specializing in creating engaging, personalized AI news digests.
-
-Your role is to write a warm, professional introduction for a daily AI news digest email that:
-- Greets the user by name
-- Includes the current date
-- Provides a brief, engaging overview of what's coming in the top 10 ranked articles
-- Highlights the most interesting or important themes
-- Sets expectations for the content ahead
-
-Keep it concise (2-3 sentences for the introduction), friendly, and professional."""
+SYSTEM_PROMPT = """Write a short, warm intro for a daily AI news digest email.
+Greet the user by name, mention today's date, and briefly tease what's in the top articles.
+2-3 sentences max. Keep it friendly, not corporate."""
 
 
 class EmailAgent:
@@ -69,78 +50,61 @@ class EmailAgent:
             base_url="https://api.groq.com/openai/v1",
         )
         self.model = "meta-llama/llama-4-scout-17b-16e-instruct"
-        self.user_profile = user_profile
+        self.user = user_profile
 
-    def generate_introduction(self, ranked_articles: List) -> EmailIntroduction:
-        if not ranked_articles:
-            return EmailIntroduction(
-                greeting=f"Hey {self.user_profile['name']}, here is your daily digest of AI news for {datetime.now().strftime('%B %d, %Y')}.",
-                introduction="No articles were ranked today."
+    def _make_intro(self, articles: List) -> EmailIntro:
+        if not articles:
+            today = datetime.now().strftime("%B %d, %Y")
+            return EmailIntro(
+                greeting=f"Hey {self.user['name']}, here's your AI digest for {today}.",
+                introduction="Nothing new to report today."
             )
 
-        top_articles = ranked_articles[:10]
-        article_summaries = "\n".join([
-            f"{idx + 1}. {article.title if hasattr(article, 'title') else article.get('title', 'N/A')} (Score: {article.relevance_score if hasattr(article, 'relevance_score') else article.get('relevance_score', 0):.1f}/10)"
-            for idx, article in enumerate(top_articles)
+        top = articles[:10]
+        today = datetime.now().strftime("%B %d, %Y")
+        titles = "\n".join([
+            f"{i+1}. {a.title if hasattr(a, 'title') else a.get('title', '')} ({a.relevance_score if hasattr(a, 'relevance_score') else a.get('relevance_score', 0):.1f}/10)"
+            for i, a in enumerate(top)
         ])
 
-        current_date = datetime.now().strftime('%B %d, %Y')
-        user_prompt = f"""Create an email introduction for {self.user_profile['name']} for {current_date}.
+        prompt = f"""Write an intro for {self.user['name']}'s digest on {today}.
 
-Top 10 ranked articles:
-{article_summaries}
-
-Generate a greeting and introduction that previews these articles."""
+Top articles:
+{titles}"""
 
         try:
-            response = self.client.chat.completions.create(
+            resp = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": EMAIL_PROMPT},
-                    {"role": "user", "content": user_prompt},
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.7,
                 response_format={
                     "type": "json_schema",
                     "json_schema": {
-                        "name": "email_introduction",
-                        "schema": EmailIntroduction.model_json_schema(),
+                        "name": "email_intro",
+                        "schema": EmailIntro.model_json_schema(),
                     },
                 },
             )
+            data = json.loads(resp.choices[0].message.content)
+            intro = EmailIntro.model_validate(data)
 
-            raw = response.choices[0].message.content
-            data = json.loads(raw)
-            intro = EmailIntroduction.model_validate(data)
-
-            if not intro.greeting.startswith(f"Hey {self.user_profile['name']}"):
-                intro.greeting = f"Hey {self.user_profile['name']}, here is your daily digest of AI news for {current_date}."
+            # make sure greeting starts properly
+            if not intro.greeting.lower().startswith("hey"):
+                intro.greeting = f"Hey {self.user['name']}, here's your AI digest for {today}."
 
             return intro
         except Exception as e:
-            print(f"Error generating introduction: {e}")
-            current_date = datetime.now().strftime('%B %d, %Y')
-            return EmailIntroduction(
-                greeting=f"Hey {self.user_profile['name']}, here is your daily digest of AI news for {current_date}.",
-                introduction="Here are the top 10 AI news articles ranked by relevance to your interests."
+            print(f"Error generating email intro: {e}")
+            today = datetime.now().strftime("%B %d, %Y")
+            return EmailIntro(
+                greeting=f"Hey {self.user['name']}, here's your AI digest for {today}.",
+                introduction="Here are your top AI stories for today."
             )
 
-    def create_email_digest(self, ranked_articles: List[dict], limit: int = 10) -> EmailDigest:
-        top_articles = ranked_articles[:limit]
-        introduction = self.generate_introduction(top_articles)
-
-        return EmailDigest(
-            introduction=introduction,
-            ranked_articles=top_articles
-        )
-
-    def create_email_digest_response(self, ranked_articles: List[RankedArticleDetail], total_ranked: int, limit: int = 10) -> EmailDigestResponse:
-        top_articles = ranked_articles[:limit]
-        introduction = self.generate_introduction(top_articles)
-
-        return EmailDigestResponse(
-            introduction=introduction,
-            articles=top_articles,
-            total_ranked=total_ranked,
-            top_n=limit
-        )
+    def build_digest(self, ranked_articles: List[ArticleDetail], total_ranked: int, limit: int = 10) -> EmailDigest:
+        top = ranked_articles[:limit]
+        intro = self._make_intro(top)
+        return EmailDigest(intro=intro, articles=top, total_ranked=total_ranked, top_n=limit)
