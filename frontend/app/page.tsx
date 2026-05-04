@@ -1,26 +1,13 @@
-'use client';
-
 import OnboardingForm from '@/components/OnboardingForm';
+import Navbar from '@/components/Navbar';
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background selection:bg-white/5 selection:text-white">
-      {/* Header */}
-      <header className="px-8 py-12 max-w-6xl mx-auto flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div className="w-8 h-8 border border-zinc-800 rounded-sm rotate-45 flex items-center justify-center">
-            <div className="w-1.5 h-1.5 bg-white rounded-full" />
-          </div>
-          <h1 className="text-2xl font-serif font-medium tracking-tight">AI Digest</h1>
-        </div>
-        <nav className="flex gap-10 text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-500">
-          <a href="#" className="hover:text-white transition-colors">Archive</a>
-          <a href="#" className="hover:text-white transition-colors">Manifesto</a>
-        </nav>
-      </header>
+      <Navbar />
 
-      <main className="px-8 py-16 max-w-6xl mx-auto">
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-24 items-start">
+      <main className="px-8 py-16 max-w-6xl mx-auto min-h-[calc(100vh-200px)] flex items-center">
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-24 items-center w-full">
           <div className="lg:col-span-6 space-y-12">
             <div className="space-y-6">
               <h2 className="text-5xl md:text-7xl font-serif leading-[1.1] text-white">

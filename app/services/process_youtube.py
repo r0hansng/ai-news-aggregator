@@ -12,6 +12,21 @@ from app.database.repository import Repository
 TRANSCRIPT_UNAVAILABLE_MARKER = "__UNAVAILABLE__"
 
 
+def process_youtube_channels(channel_ids: list[str], hours: int = 24):
+    scraper = YouTubeScraper()
+    repo = Repository()
+    
+    total_new = 0
+    for channel_id in channel_ids:
+        print(f"Scraping channel: {channel_id}")
+        videos = scraper.scrape_channel(channel_id, hours=hours)
+        if videos:
+            count = repo.bulk_create_youtube_videos([v.model_dump() for v in videos])
+            total_new += count
+            print(f"Added {count} new videos from {channel_id}")
+            
+    return total_new
+
 def process_youtube_transcripts(limit: Optional[int] = None) -> dict:
     scraper = YouTubeScraper()
     repo = Repository()

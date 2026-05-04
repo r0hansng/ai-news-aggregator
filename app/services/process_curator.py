@@ -19,8 +19,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def curate_digests(hours: int = 24) -> dict:
-    curator = CuratorAgent(USER_PROFILE)
+def curate_digests(hours: int = 24, user_profile: dict = None) -> dict:
+    profile = user_profile or USER_PROFILE
+    curator = CuratorAgent(profile)
     repo = Repository()
     
     digests = repo.get_recent_digests(hours=hours)
@@ -31,7 +32,7 @@ def curate_digests(hours: int = 24) -> dict:
         return {"total": 0, "ranked": 0}
     
     logger.info(f"Curating {total} digests from the last {hours} hours")
-    logger.info(f"User profile: {USER_PROFILE['name']} - {USER_PROFILE['background']}")
+    logger.info(f"User profile: {profile['name']} - {profile['background']}")
     
     ranked_articles = curator.rank_digests(digests)
     
