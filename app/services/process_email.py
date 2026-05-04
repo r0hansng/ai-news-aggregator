@@ -1,3 +1,4 @@
+import os
 import logging
 from dotenv import load_dotenv
 
@@ -5,7 +6,6 @@ load_dotenv()
 
 from app.agent.email_agent import EmailAgent, ArticleDetail, EmailDigest
 from app.agent.curator_agent import CuratorAgent
-from app.profiles.user_profile import USER_PROFILE
 from app.database.repository import Repository
 from app.services.email import send_email, digest_to_html
 
@@ -17,25 +17,27 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigest:
-    repo = Repository()
-    digests = repo.get_recent_digests(hours=hours)
-
-    if not digests:
-        logger.warning(f"No digests found from the last {hours} hours")
-        raise ValueError("No digests available")
-
-    logger.info(f"Ranking {len(digests)} digests")
-    curator = CuratorAgent(USER_PROFILE)
+def generate_email_digest_for_user(user, digests, top_n: int = 10) -> EmailDigest:
+    logger.info(f"Ranking {len(digests)} digests for user {user.name}")
+    
+    user_profile = {
+        "name": user.name,
+        "title": user.title,
+        "background": user.background,
+        "expertise_level": user.expertise_level,
+        "interests": user.interests,
+        "preferences": user.preferences
+    }
+    
+    curator = CuratorAgent(user_profile)
     ranked = curator.rank_digests(digests)
 
     if not ranked:
-        raise ValueError("Failed to rank articles")
+        return None
 
-    # build a lookup so we can join the ranking back to full article data
     digest_map = {d["id"]: d for d in digests}
-
     article_details = []
+    
     for a in ranked:
         d = digest_map.get(a.digest_id, {})
         article_details.append(ArticleDetail(
@@ -49,42 +51,70 @@ def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigest:
             article_type=d.get("article_type", ""),
         ))
 
-    logger.info(f"Building email with top {top_n} articles")
-    email_agent = EmailAgent(USER_PROFILE)
+    logger.info(f"Building email with top {top_n} articles for {user.name}")
+    email_agent = EmailAgent(user_profile)
     digest = email_agent.build_digest(
         ranked_articles=article_details,
         total_ranked=len(ranked),
         limit=top_n
     )
 
-    logger.info(digest.intro.greeting)
-    logger.info(digest.intro.introduction)
-
     return digest
 
 
-def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
-    try:
-        digest = generate_email_digest(hours=hours, top_n=top_n)
+def send_digest_emails(hours: int = 24, top_n: int = 10) -> dict:
+    repo = Repository()
+    users = repo.get_all_users()
+    digests = repo.get_recent_digests(hours=hours)
 
-        subject = f"Daily AI News Digest - {digest.intro.greeting.split('for ')[-1] if 'for ' in digest.intro.greeting else 'Today'}"
-        send_email(
-            subject=subject,
-            body_text=digest.to_markdown(),
-            body_html=digest_to_html(digest)
-        )
+    if not users:
+        logger.warning("No users found in the database.")
+        return {"success": False, "error": "No users available"}
 
-        logger.info("Email sent!")
-        return {"success": True, "subject": subject, "articles_count": len(digest.articles)}
+    if not digests:
+        logger.warning(f"No digests found from the last {hours} hours")
+        return {"success": False, "error": "No digests available"}
 
-    except ValueError as e:
-        logger.error(f"Error sending email: {e}")
-        return {"success": False, "error": str(e)}
+    app_env = os.getenv("APP_ENV", "development").lower()
+    my_email = os.getenv("MY_EMAIL")
+    
+    success_count = 0
+    failed_count = 0
+
+    for user in users:
+        try:
+            digest = generate_email_digest_for_user(user, digests, top_n=top_n)
+            if not digest:
+                logger.warning(f"Failed to generate digest for {user.name}")
+                failed_count += 1
+                continue
+
+            subject = f"Daily AI News Digest - {digest.intro.greeting.split('for ')[-1] if 'for ' in digest.intro.greeting else 'Today'}"
+            
+            # Environment Routing Logic
+            recipient = user.email if app_env == "production" else my_email
+            logger.info(f"Sending email for {user.name} to {recipient} (Env: {app_env})")
+            
+            send_email(
+                subject=f"[{user.name}] {subject}",
+                body_text=digest.to_markdown(),
+                body_html=digest_to_html(digest),
+                recipients=[recipient]
+            )
+            success_count += 1
+            logger.info(f"Email sent for {user.name}!")
+            
+        except Exception as e:
+            logger.error(f"Error sending email for {user.name}: {e}")
+            failed_count += 1
+
+    return {
+        "success": success_count > 0, 
+        "success_count": success_count,
+        "failed_count": failed_count
+    }
 
 
 if __name__ == "__main__":
-    result = send_digest_email(hours=24, top_n=10)
-    if result["success"]:
-        print(f"Sent! Subject: {result['subject']} | Articles: {result['articles_count']}")
-    else:
-        print(f"Failed: {result['error']}")
+    result = send_digest_emails(hours=24, top_n=10)
+    print(f"Result: {result}")

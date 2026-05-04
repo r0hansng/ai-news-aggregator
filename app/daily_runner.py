@@ -8,7 +8,7 @@ from app.runner import run_scrapers
 from app.services.process_anthropic import process_anthropic_markdown
 from app.services.process_youtube import process_youtube_transcripts
 from app.services.process_digest import process_digests
-from app.services.process_email import send_digest_email
+from app.services.process_email import send_digest_emails
 
 def run_daily_pipeline(hours=24, top_n=10):
     start_time = time.time()
@@ -50,12 +50,12 @@ def run_daily_pipeline(hours=24, top_n=10):
         results["digests"] = digest_result
         print(f"Created {digest_result['processed']} digests ({digest_result['failed']} failed out of {digest_result['total']})")
         
-        print("\n[5/5] Sending email digest...")
-        email_result = send_digest_email(hours=hours, top_n=top_n)
+        print("\n[5/5] Sending email digests...")
+        email_result = send_digest_emails(hours=hours, top_n=top_n)
         results["email"] = email_result
         
         if email_result["success"]:
-            print(f"Email sent with {email_result['articles_count']} articles")
+            print(f"Emails sent! Processed {email_result['success_count']} users successfully.")
             results["success"] = True
         else:
             print(f"Failed to send email: {email_result.get('error', 'Unknown')}")

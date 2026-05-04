@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Column, String, DateTime, Text
+from sqlalchemy import Column, String, DateTime, Text, JSON
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -54,3 +54,18 @@ class Digest(Base):
     title = Column(String, nullable=False)
     summary = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
+    title = Column(String)
+    background = Column(Text)
+    expertise_level = Column(String)
+    interests = Column(JSON, nullable=False, default=list)
+    preferences = Column(JSON, nullable=False, default=dict)
+    youtube_channels = Column(JSON, nullable=False, default=list)
+    created_at = Column(DateTime, default=datetime.utcnow)
+

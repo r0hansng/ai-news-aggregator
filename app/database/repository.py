@@ -1,13 +1,39 @@
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
-from .models import YouTubeVideo, OpenAIArticle, AnthropicArticle, Digest
+from .models import YouTubeVideo, OpenAIArticle, AnthropicArticle, Digest, User
 from .connection import get_session
 
 
 class Repository:
     def __init__(self, session: Optional[Session] = None):
         self.session = session or get_session()
+        
+    def create_user(self, user_id: str, name: str, email: str, title: str = "", background: str = "", expertise_level: str = "Beginner", interests: list = None, preferences: dict = None, youtube_channels: list = None) -> Optional[User]:
+        existing = self.session.query(User).filter_by(email=email).first()
+        if existing:
+            return None
+            
+        user = User(
+            id=user_id,
+            name=name,
+            email=email,
+            title=title,
+            background=background,
+            expertise_level=expertise_level,
+            interests=interests or [],
+            preferences=preferences or {},
+            youtube_channels=youtube_channels or []
+        )
+        self.session.add(user)
+        self.session.commit()
+        return user
+        
+    def get_all_users(self) -> List[User]:
+        return self.session.query(User).all()
+        
+    def get_user_by_email(self, email: str) -> Optional[User]:
+        return self.session.query(User).filter_by(email=email).first()
     
     def create_youtube_video(self, video_id: str, title: str, url: str, channel_id: str, 
                             published_at: datetime, description: str = "", transcript: Optional[str] = None) -> Optional[YouTubeVideo]:

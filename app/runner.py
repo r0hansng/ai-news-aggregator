@@ -1,4 +1,3 @@
-from .config import YOUTUBE_CHANNELS
 from .scrapers.youtube import YouTubeScraper
 from .scrapers.openai import OpenAIScraper
 from .scrapers.anthropic import AnthropicScraper
@@ -13,7 +12,18 @@ def run_scrapers(hours=24):
     youtube_videos = []
     video_dicts = []
     
-    for channel_id in YOUTUBE_CHANNELS:
+    users = repo.get_all_users()
+    channels_to_scrape = set()
+    for u in users:
+        if u.youtube_channels:
+            channels_to_scrape.update(u.youtube_channels)
+            
+    # Fallback if no users have channels configured
+    if not channels_to_scrape:
+        from .config import YOUTUBE_CHANNELS
+        channels_to_scrape.update(YOUTUBE_CHANNELS)
+    
+    for channel_id in channels_to_scrape:
         videos = youtube_scraper.get_latest_videos(channel_id, hours=hours)
         youtube_videos.extend(videos)
         for v in videos:
