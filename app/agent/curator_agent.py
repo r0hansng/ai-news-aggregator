@@ -1,4 +1,5 @@
 import os
+import json
 from typing import List
 from openai import OpenAI
 from pydantic import BaseModel, Field
@@ -41,8 +42,11 @@ Rank articles from most relevant (rank 1) to least relevant. Ensure each article
 
 class CuratorAgent:
     def __init__(self, user_profile: dict):
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.model = "gpt-4.1"
+        self.client = OpenAI(
+            api_key=os.getenv("GROQ_API_KEY"),
+            base_url="https://api.groq.com/openai/v1",
+        )
+        self.model = "meta-llama/llama-4-scout-17b-16e-instruct"
         self.user_profile = user_profile
         self.system_prompt = self._build_system_prompt()
 
@@ -50,7 +54,7 @@ class CuratorAgent:
         interests = "\n".join(f"- {interest}" for interest in self.user_profile["interests"])
         preferences = self.user_profile["preferences"]
         pref_text = "\n".join(f"- {k}: {v}" for k, v in preferences.items())
-        
+
         return f"""{CURATOR_PROMPT}
 
 User Profile:
@@ -67,12 +71,12 @@ Preferences:
     def rank_digests(self, digests: List[dict]) -> List[RankedArticle]:
         if not digests:
             return []
-        
+
         digest_list = "\n\n".join([
             f"ID: {d['id']}\nTitle: {d['title']}\nSummary: {d['summary']}\nType: {d['article_type']}"
             for d in digests
         ])
-        
+
         user_prompt = f"""Rank these {len(digests)} AI news digests based on the user profile:
 
 {digest_list}
@@ -80,15 +84,25 @@ Preferences:
 Provide a relevance score (0.0-10.0) and rank (1-{len(digests)}) for each article, ordered from most to least relevant."""
 
         try:
-            response = self.client.responses.parse(
+            response = self.client.chat.completions.create(
                 model=self.model,
-                instructions=self.system_prompt,
+                messages=[
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
                 temperature=0.3,
-                input=user_prompt,
-                text_format=RankedDigestList
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "ranked_digest_list",
+                        "schema": RankedDigestList.model_json_schema(),
+                    },
+                },
             )
-            
-            ranked_list = response.output_parsed
+
+            raw = response.choices[0].message.content
+            data = json.loads(raw)
+            ranked_list = RankedDigestList.model_validate(data)
             return ranked_list.articles if ranked_list else []
         except Exception as e:
             print(f"Error ranking digests: {e}")
