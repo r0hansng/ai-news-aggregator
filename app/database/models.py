@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Column, String, DateTime, Text, JSON
+from sqlalchemy import Column, String, DateTime, Text, JSON, Boolean
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -67,5 +67,17 @@ class User(Base):
     interests = Column(JSON, nullable=False, default=list)
     preferences = Column(JSON, nullable=False, default=dict)
     youtube_channels = Column(JSON, nullable=False, default=list)
+    hashed_password = Column(String, nullable=True) # Temporarily nullable for existing users
+    email_updates_enabled = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class UserFeedback(Base):
+    __tablename__ = "user_feedback"
+    
+    id = Column(String, primary_key=True)
+    user_id = Column(String, nullable=False)
+    digest_id = Column(String, nullable=False)
+    rating = Column(String, nullable=False) # relevant, irrelevant, etc.
+    comment = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 

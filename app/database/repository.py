@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
-from .models import YouTubeVideo, OpenAIArticle, AnthropicArticle, Digest, User
+from .models import YouTubeVideo, OpenAIArticle, AnthropicArticle, Digest, User, UserFeedback
 from .connection import get_session
 
 
@@ -9,7 +9,7 @@ class Repository:
     def __init__(self, session: Optional[Session] = None):
         self.session = session or get_session()
         
-    def create_user(self, user_id: str, name: str, email: str, title: str = "", background: str = "", expertise_level: str = "Beginner", interests: list = None, preferences: dict = None, youtube_channels: list = None) -> Optional[User]:
+    def create_user(self, user_id: str, name: str, email: str, hashed_password: str = None, title: str = "", background: str = "", expertise_level: str = "Beginner", interests: list = None, preferences: dict = None, youtube_channels: list = None) -> Optional[User]:
         existing = self.session.query(User).filter_by(email=email).first()
         if existing:
             return None
@@ -18,6 +18,7 @@ class Repository:
             id=user_id,
             name=name,
             email=email,
+            hashed_password=hashed_password,
             title=title,
             background=background,
             expertise_level=expertise_level,
@@ -32,8 +33,35 @@ class Repository:
     def get_all_users(self) -> List[User]:
         return self.session.query(User).all()
         
+    def get_user_by_id(self, user_id: str) -> Optional[User]:
+        return self.session.query(User).filter_by(id=user_id).first()
+        
     def get_user_by_email(self, email: str) -> Optional[User]:
         return self.session.query(User).filter_by(email=email).first()
+        
+    def update_user_signals(self, user_id: str, interests: List[str] = None, youtube_channels: List[str] = None) -> Optional[User]:
+        user = self.get_user_by_id(user_id)
+        if not user:
+            return None
+        
+        if interests is not None:
+            user.interests = interests
+        if youtube_channels is not None:
+            user.youtube_channels = youtube_channels
+            
+        self.session.commit()
+        self.session.refresh(user)
+        return user
+    
+    def update_user_email_preferences(self, user_id: str, enabled: bool) -> Optional[User]:
+        user = self.get_user_by_id(user_id)
+        if not user:
+            return None
+        
+        user.email_updates_enabled = enabled
+        self.session.commit()
+        self.session.refresh(user)
+        return user
     
     def create_youtube_video(self, video_id: str, title: str, url: str, channel_id: str, 
                             published_at: datetime, description: str = "", transcript: Optional[str] = None) -> Optional[YouTubeVideo]:
@@ -271,3 +299,19 @@ class Repository:
             }
             for d in digests
         ]
+
+    def get_all_digests(self) -> List[Digest]:
+        return self.session.query(Digest).order_by(Digest.created_at.desc()).all()
+
+    def create_feedback(self, user_id: str, digest_id: str, rating: str, comment: str = None) -> UserFeedback:
+        import uuid
+        feedback = UserFeedback(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            digest_id=digest_id,
+            rating=rating,
+            comment=comment
+        )
+        self.session.add(feedback)
+        self.session.commit()
+        return feedback
