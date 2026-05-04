@@ -76,7 +76,11 @@ def run_daily_pipeline(hours=24, top_n=10):
     
     return results
 
+import sys
+
 if __name__ == "__main__":
-    result = run_daily_pipeline(hours=24, top_n=10)
+    hours = int(sys.argv[1]) if len(sys.argv) > 1 else 168
+    top_n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    result = run_daily_pipeline(hours=hours, top_n=top_n)
     exit(0 if result["success"] else 1)
 

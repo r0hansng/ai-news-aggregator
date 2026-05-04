@@ -9,7 +9,7 @@
 UV        := uv
 PYTHON    := $(UV) run python
 COMPOSE   := docker compose -f docker/docker-compose.yml
-HOURS     ?= 24   # window passed to scrapers / email digest (override: make run HOURS=48)
+HOURS     ?= 168  # window passed to scrapers / email digest (override: make run HOURS=48)
 TOP_N     ?= 10   # top articles in the email digest
 
 .DEFAULT_GOAL := help
@@ -107,8 +107,8 @@ email: ## Step 6 — Build and send the email digest
 # Full pipeline
 # ==============================================================================
 
-run: ## Run the complete daily pipeline  (HOURS=24 TOP_N=10 by default)
-	$(PYTHON) -m app.daily_runner
+run: ## Run the complete daily pipeline  (HOURS=168 TOP_N=10 by default)
+	$(PYTHON) -m app.daily_runner $(HOURS) $(TOP_N)
 
 run-dry: ## Dry-run: scrape + process only (no digest, no email)
 	@echo ">>> [1/3] Scraping..."
