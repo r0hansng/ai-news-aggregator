@@ -1,21 +1,26 @@
 # ==============================================================================
-# AI News Aggregator — Makefile
-# Usage: make <target>   (run `make help` for a full list)
+# AI News Aggregator — Global Orchestration
+# 
+# Design Philosophy:
+# - Self-Documenting: Use `make help` to discover all operational targets.
+# - Tooling-Agnostic: Abstracts complex `uv`, `bun`, and `docker` commands.
+# - Context-Aware: Managed through specific project flags (--project, --reload-dir).
 # ==============================================================================
 
 # ---------------------------------------------------------------------------
-# Configuration
+# Configuration & Binary Paths
 # ---------------------------------------------------------------------------
 UV        := uv
-PYTHON    := $(UV) run python
+PYTHON    := $(UV) --project backend run python
 COMPOSE   := docker compose -f docker/docker-compose.yml
-HOURS     ?= 168  # window passed to scrapers / email digest (override: make run HOURS=48)
-TOP_N     ?= 10   # top articles in the email digest
+HOURS     ?= 168  # Processing window (override: make run HOURS=48)
+TOP_N     ?= 10   # Quantity of signals in email (override: make run TOP_N=5)
 
 .DEFAULT_GOAL := help
 .PHONY: help \
         install sync add lock upgrade \
         db-up db-down db-reset db-init db-shell \
+        fe-install fe-dev \
         scrape process-anthropic process-youtube \
         digest curator email \
         run run-dry \
@@ -23,117 +28,127 @@ TOP_N     ?= 10   # top articles in the email digest
         clean
 
 # ---------------------------------------------------------------------------
-# Help
+# Documentation
 # ---------------------------------------------------------------------------
-help: ## Show this help message
+help: ## Discovery: Show all available operational targets
 	@echo ""
-	@echo "  AI News Aggregator — available targets"
+	@echo "  AI News Aggregator — Production Orchestration"
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ { printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@echo ""
 
 # ==============================================================================
-# Dependency management (uv)
+# Backend Dependency Management (uv)
 # ==============================================================================
 
-install: ## Create venv and install all dependencies
-	$(UV) venv
-	$(UV) sync
+install: ## Setup: Create virtualenv and install all backend dependencies
+	$(UV) venv backend/.venv
+	$(UV) --project backend sync
 
-sync: ## Sync installed packages to match uv.lock
-	$(UV) sync
+sync: ## Maintenance: Force sync installed packages to match lockfile
+	$(UV) --project backend sync
 
-add: ## Add a new package  (usage: make add PKG=requests)
-	$(UV) add $(PKG)
+add: ## Lifecycle: Add new production package (usage: make add PKG=requests)
+	$(UV) --project backend add $(PKG)
 
-add-dev: ## Add a new dev-only package  (usage: make add-dev PKG=pytest)
-	$(UV) add --dev $(PKG)
+add-dev: ## Lifecycle: Add new development package (usage: make add-dev PKG=pytest)
+	$(UV) --project backend add --dev $(PKG)
 
-lock: ## Regenerate uv.lock without installing
-	$(UV) lock
+lock: ## Manifest: Regenerate backend lockfile (uv.lock)
+	$(UV) --project backend lock
 
-upgrade: ## Upgrade all dependencies and refresh uv.lock
-	$(UV) lock --upgrade
+upgrade: ## Security: Upgrade all backend dependencies to latest versions
+	$(UV) --project backend lock --upgrade
 
 # ==============================================================================
-# Docker / Database lifecycle
+# Docker & Database Lifecycle
 # ==============================================================================
 
-db-up: ## Start Postgres + pgAdmin in the background
+db-up: ## Infra: Provision Postgres and pgAdmin containers (background)
 	$(COMPOSE) up -d
-	@echo "  Postgres  → localhost:5432"
-	@echo "  pgAdmin   → http://localhost:8080  (admin@local.dev / admin)"
+	@echo "  Local Postgres → localhost:5432"
+	@echo "  Admin Dashboard → http://localhost:8080 (admin@local.dev / admin)"
 
-db-down: ## Stop all containers gracefully
+db-down: ## Infra: Gracefully terminate all service containers
 	$(COMPOSE) down
 
-db-reset: ## Stop containers AND delete all volumes (destructive!)
+db-reset: ## Maintenance: Terminate services AND purge all volumes (destructive)
 	$(COMPOSE) down -v
-	@echo "  All data volumes removed."
+	@echo "  System state fully purged."
 
-db-logs: ## Tail Docker container logs
+db-logs: ## Debug: Stream real-time container logs to terminal
 	$(COMPOSE) logs -f
 
-db-init: ## Create database tables (run once after db-up)
-	$(PYTHON) -m app.database.create_tables
+db-init: ## Bootstrap: Initialize relational schema (run after db-up)
+	$(PYTHON) -m backend.infra.database.create_tables
 
-db-shell: ## Open a psql shell inside the Postgres container
+db-shell: ## Access: Enter interactive psql shell inside the container
 	docker exec -it ai-news-aggregator-db \
 		psql -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-ai_news_aggregator}
 
 # ==============================================================================
-# Individual pipeline steps
+# Frontend Orchestration (Bun)
 # ==============================================================================
 
-scrape: ## Step 1 — Scrape YouTube / OpenAI / Anthropic sources
-	$(PYTHON) -m app.runner
+fe-install: ## Setup: Install frontend dependencies using Bun
+	cd frontend && bun install
 
-process-anthropic: ## Step 2 — Convert Anthropic markdown to plain text
-	$(PYTHON) -m app.services.process_anthropic
-
-process-youtube: ## Step 3 — Fetch YouTube transcripts
-	$(PYTHON) -m app.services.process_youtube
-
-digest: ## Step 4 — Generate AI digests for unprocessed articles
-	$(PYTHON) -m app.services.process_digest
-
-curator: ## Step 5 — Rank/curate digests using the curator agent
-	$(PYTHON) -m app.services.process_curator
-
-email: ## Step 6 — Build and send the email digest
-	$(PYTHON) -m app.services.process_email
+fe-dev: ## Development: Launch Next.js dev server (localhost:3000)
+	cd frontend && bun run dev
 
 # ==============================================================================
-# Full pipeline
+# Technical Signal Pipeline (Step-by-Step)
 # ==============================================================================
 
-run: ## Run the complete daily pipeline  (HOURS=168 TOP_N=10 by default)
-	$(PYTHON) -m app.daily_runner $(HOURS) $(TOP_N)
+scrape: ## Step 1: Execute primary source scrapers (YT/API)
+	$(PYTHON) -m backend.cmd.worker
 
-run-dry: ## Dry-run: scrape + process only (no digest, no email)
-	@echo ">>> [1/3] Scraping..."
-	$(PYTHON) -m app.runner
-	@echo ">>> [2/3] Processing Anthropic markdown..."
-	$(PYTHON) -m app.services.process_anthropic
-	@echo ">>> [3/3] Processing YouTube transcripts..."
-	$(PYTHON) -m app.services.process_youtube
-	@echo ">>> Dry-run complete. No digests or emails were sent."
+process-anthropic: ## Step 2: Normalize Anthropic research signals
+	$(PYTHON) -m backend.features.signals.process_anthropic
 
-# ==============================================================================
-# Code quality
-# ==============================================================================
+process-youtube: ## Step 3: Extract and process YouTube technical transcripts
+	$(PYTHON) -m backend.features.signals.process_youtube
 
-lint: ## Run ruff linter
-	$(UV) run ruff check app/
+digest: ## Step 4: Synthesize raw signals into AI-generated digests
+	$(PYTHON) -m backend.features.digests.process_digest
 
-format: ## Auto-format code with ruff
-	$(UV) run ruff format app/
+curator: ## Step 5: Rank signals via Curator Agent (Llama 3.3)
+	$(PYTHON) -m backend.features.digests.process_curator
+
+email: ## Step 6: Dispatch curated signals via email delivery engine
+	$(PYTHON) -m backend.features.digests.process_email
 
 # ==============================================================================
-# Housekeeping
+# Integrated Workflow
 # ==============================================================================
 
-clean: ## Remove __pycache__ and .pyc files
+run: ## Production: Execute the comprehensive daily signal pipeline
+	$(PYTHON) -m backend.cmd.daily_worker $(HOURS) $(TOP_N)
+
+run-dry: ## Validation: Execute scraping and processing only (no delivery)
+	@echo ">>> [1/3] Triggering Signal Scrapers..."
+	$(PYTHON) -m backend.cmd.worker
+	@echo ">>> [2/3] Normalizing Research Signals..."
+	$(PYTHON) -m backend.features.signals.process_anthropic
+	@echo ">>> [3/3] Processing Video Transcripts..."
+	$(PYTHON) -m backend.features.signals.process_youtube
+	@echo ">>> Dry-run complete. System state updated; no digests emitted."
+
+# ==============================================================================
+# Code Quality & Standards
+# ==============================================================================
+
+lint: ## Quality: Audit code for style and logical errors (Ruff)
+	$(UV) --project backend run ruff check backend/
+
+format: ## Quality: Auto-enforce standard code formatting (Ruff)
+	$(UV) --project backend run ruff format backend/
+
+# ==============================================================================
+# System Housekeeping
+# ==============================================================================
+
+clean: ## Maintenance: Purge cache artifacts and temporary binaries
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -delete
-	@echo "  Cleaned."
+	@echo "  Artifacts purged."
