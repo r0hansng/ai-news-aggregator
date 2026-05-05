@@ -1,0 +1,67 @@
+from typing import Optional, Union, List, Dict, Any
+import sys
+import uuid
+from pathlib import Path
+
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from backend.infra.database.connection import engine
+from backend.infra.database.base import Base
+import backend.infra.database.models
+from backend.features.users.repository import UserRepository
+
+
+def seed_database():
+
+    Base.metadata.create_all(engine)
+    print("Database tables created/verified.")
+
+    user_repo = UserRepository()
+
+
+    admin_email = "admin@local.dev"
+    if user_repo.get_user_by_email(admin_email):
+        print(f"User {admin_email} already exists in the database.")
+        return
+
+
+    user_id = uuid.uuid4().hex
+
+
+    youtube_channels = [
+        "UCawZsQWqfGSbCI5yjkdVkTA"  # Matthew Berman
+    ]
+
+    admin_user = user_repo.create_user(
+        user_id=user_id,
+        name="Admin",
+        email=admin_email,
+        title="AI System Administrator",
+        background="System administrator and AI enthusiast testing the production readiness of the AI News Aggregator.",
+        expertise_level="Advanced",
+        interests=[
+            "Large Language Models (LLMs) and their applications",
+            "Retrieval-Augmented Generation (RAG) systems",
+            "AI agent architectures and frameworks",
+            "Production AI systems and MLOps",
+            "Real-world AI applications and case studies",
+            "AI infrastructure and scaling challenges"
+        ],
+        preferences={
+            "prefer_practical": True,
+            "prefer_technical_depth": True,
+            "prefer_research_breakthroughs": True,
+            "prefer_production_focus": True,
+            "avoid_marketing_hype": True
+        },
+        youtube_channels=youtube_channels
+    )
+
+    if admin_user:
+        print(f"Successfully created user: {admin_user.name} ({admin_user.email})")
+    else:
+        print("Failed to create user.")
+
+if __name__ == "__main__":
+    seed_database()
