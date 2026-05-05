@@ -1,0 +1,216 @@
+{
+  "info": {
+    "name": "AI News Aggregator API",
+    "description": "Comprehensive collection for testing the AI News Aggregator backend with JWT support.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication & Onboarding",
+      "item": [
+        {
+          "name": "Register New User (Onboard)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"user_id\", jsonData.user.id);",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.tokens.access_token);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.tokens.refresh_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alan Turing\",\n  \"email\": \"alan@turing.ai\",\n  \"password\": \"super-secure-password-123\",\n  \"title\": \"Principal AI Scientist\",\n  \"background\": \"Expert in cryptography and foundational machine learning.\",\n  \"expertise_level\": \"Expert\",\n  \"interests\": [\"LLMs\", \"Cryptography\", \"Agents\"],\n  \"youtube_channels\": [\"UC_x5XG1OV2P6uZZ5FSM9Ttw\"],\n  \"preferences\": {\n    \"digestFrequency\": \"Daily\",\n    \"format\": \"Technical Summary\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/onboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "onboard"]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"user_id\", jsonData.user.id);",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.tokens.access_token);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.tokens.refresh_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alan@turing.ai\",\n  \"password\": \"super-secure-password-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Access Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.access_token);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refresh_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "refresh"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Signals & Sources",
+      "item": [
+        {
+          "name": "Get My Signals",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "X-User-Id", "value": "{{user_id}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/signals/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "signals", ""]
+            }
+          }
+        },
+        {
+          "name": "Add Interest",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "X-User-Id", "value": "{{user_id}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topic\": \"Vector Databases\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/signals/interests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "signals", "interests"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. News Feed (Digests)",
+      "item": [
+        {
+          "name": "Fetch Latest AI-Ranked Feed",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "X-User-Id", "value": "{{user_id}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/digests/latest?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "digests", "latest"],
+              "query": [{ "key": "limit", "value": "10" }]
+            }
+          }
+        },
+        {
+          "name": "Submit Article Feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "X-User-Id", "value": "{{user_id}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": \"relevant\",\n  \"comment\": \"Excellent technical depth on the architecture.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/digests/REPLACE_WITH_DIGEST_ID/feedback",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "digests", "REPLACE_WITH_DIGEST_ID", "feedback"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Orchestration",
+      "item": [
+        {
+          "name": "Trigger Manual Signal Refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "X-User-Id", "value": "{{user_id}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/orchestrate/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orchestrate", "refresh"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "user_id", "value": "" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" }
+  ]
+}

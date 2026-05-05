@@ -1,0 +1,40 @@
+# ==============================================================================
+# AI News Aggregator — Frontend High-Performance Environment
+# 
+# Optimization Strategy:
+# 1. Utilizes Bun (oven/bun) for 3-4x faster build cycles than traditional Node.
+# 2. Immutable Installs: Uses --frozen-lockfile to ensure environment parity 
+#    across development and production builds.
+# ==============================================================================
+
+FROM oven/bun:1.1-alpine
+
+WORKDIR /app/frontend
+
+# ------------------------------------------------------------------------------
+# Dependency Orchestration (Bun)
+# ------------------------------------------------------------------------------
+# Layer Caching: We copy package manifests separately to ensure that 
+# source changes (e.g. page edits) don't invalidate the lockfile layer.
+COPY frontend/package.json frontend/bun.lockb ./
+RUN bun install --frozen-lockfile
+
+# ------------------------------------------------------------------------------
+# Source Application
+# ------------------------------------------------------------------------------
+# The frontend source is isolated within its own subdirectory to maintain
+# monorepo modularity while allowing for clean volume mounting.
+COPY frontend/ .
+
+# Production Privacy & Performance
+# Disables Next.js anonymous telemetry data collection.
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Default Next.js development/production port
+EXPOSE 3000
+
+# ------------------------------------------------------------------------------
+# Execution Engine
+# ------------------------------------------------------------------------------
+# Uses Bun's native execution engine for the development server.
+CMD ["bun", "run", "dev"]

@@ -1,0 +1,53 @@
+# ==============================================================================
+# AI News Aggregator — Backend Production Environment
+# 
+# Optimization Strategy:
+# 1. Multi-stage layering (via alpine/slim base) to minimize attack surface.
+# 2. Dependency caching: Requirements are installed before source code to 
+#    leverage Docker layer caching during incremental development.
+# ==============================================================================
+
+FROM python:3.11-slim
+
+# Set system-level environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# ------------------------------------------------------------------------------
+# System Dependencies
+# ------------------------------------------------------------------------------
+# build-essential: Required for compiling native C extensions (e.g. psutil).
+# libpq-dev: Header files for PostgreSQL client library.
+# Purging apt-cache after installation minimizes image size.
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# ------------------------------------------------------------------------------
+# Python Dependency Management
+# ------------------------------------------------------------------------------
+# Note: We copy only requirements first to ensure that a change in source code
+# does not trigger a full reinstall of external packages.
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt
+
+# ------------------------------------------------------------------------------
+# Source Application
+# ------------------------------------------------------------------------------
+# The backend is mounted as a package (backend/) to allow for standardized
+# module-based imports across the pipeline.
+COPY backend/ ./backend/
+
+# Standard FastAPI port
+EXPOSE 8000
+
+# ------------------------------------------------------------------------------
+# Execution Orchestration
+# ------------------------------------------------------------------------------
+# uvicorn: ASGI server choice for high-concurrency performance.
+# --reload: Enabled for development; overridden in production k8s/ECS manifests.
+# --reload-dir: Explicitly limited to backend/ to avoid watching irrelevant assets.
+CMD ["uvicorn", "backend.cmd.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "backend"]

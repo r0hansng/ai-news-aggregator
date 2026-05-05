@@ -1,6 +1,22 @@
+# ==============================================================================
+# AI News Aggregator — Global Service Orchestration
+# 
+# Architecture:
+# - Microservices: Frontend (Bun/Next.js) & Backend (FastAPI).
+# - Storage: PostgreSQL 17 (Relational Store).
+# - Management: pgAdmin (Database Inspection).
+# 
+# Usage:
+# - Up:   docker compose -f docker/docker-compose.yml up -d
+# - Down: docker compose -f docker/docker-compose.yml down
+# ==============================================================================
+
 name: ai-news-aggregator
 
 services:
+  # ----------------------------------------------------------------------------
+  # Database Service (PostgreSQL)
+  # ----------------------------------------------------------------------------
   postgres:
     image: postgres:17
     container_name: ai-news-aggregator-db
@@ -13,11 +29,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
+      # Ensures backend doesn't attempt to connect before DB is initialized.
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # ----------------------------------------------------------------------------
+  # Database Administration (pgAdmin)
+  # ----------------------------------------------------------------------------
   pgadmin:
     image: dpage/pgadmin4
     container_name: ai-news-aggregator-pgadmin
@@ -31,37 +51,47 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
+  # ----------------------------------------------------------------------------
+  # Frontend Service (Next.js / Bun)
+  # ----------------------------------------------------------------------------
   frontend:
     build:
-      context: ../frontend
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
     container_name: ai-news-aggregator-frontend
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
     volumes:
-      - ../frontend:/app
-      - /app/node_modules
-      - /app/.next
+      - ../frontend:/app/frontend
+      # Anonymous volumes to prevent host node_modules/next from being overwritten.
+      - /app/frontend/node_modules
+      - /app/frontend/.next
     depends_on:
       - postgres
 
+  # ----------------------------------------------------------------------------
+  # Backend Service (FastAPI / Python)
+  # ----------------------------------------------------------------------------
   backend:
     build:
       context: ..
-      dockerfile: Dockerfile.backend
+      dockerfile: docker/Dockerfile.backend
     container_name: ai-news-aggregator-backend
     ports:
       - "8000:8000"
     env_file:
       - ../.env
     volumes:
-      - ..:/app
+      - ../backend:/app/backend
     environment:
       - POSTGRES_HOST=postgres
+    # Entrypoint uses the modular backend package.
+    command: uvicorn backend.cmd.api:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
