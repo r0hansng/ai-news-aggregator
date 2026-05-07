@@ -38,8 +38,15 @@ import Cookies from 'js-cookie';
  * const response = await apiClient.get('/api/v1/users/me');
  * // Headers are injected automatically
  */
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  }
+  return process.env.BACKEND_API_URL || 'http://localhost:8000';
+};
+
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseURL: getBaseUrl(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
