@@ -8,6 +8,7 @@
 
 'use client';
 
+import { FormProvider } from 'react-hook-form';
 import { useOnboardingForm } from '../hooks/use-onboarding-form';
 import { AuthToggle } from './AuthToggle';
 import { LoginForm } from './LoginForm';
@@ -47,31 +48,33 @@ export default function OnboardingForm() {
   }
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-left-4 duration-500">
-      <div className="space-y-8">
-        {step === 1 && <Step1Identity />}
-        {step === 2 && <Step2Signal />}
-        {step === 3 && <Step3Inputs />}
-        {step === 4 && <Step4Delivery />}
-      </div>
+    <FormProvider {...form}>
+      <div className="space-y-12 animate-in fade-in slide-in-from-left-4 duration-500">
+        <div className="space-y-8">
+          {step === 1 && <Step1Identity />}
+          {step === 2 && <Step2Signal />}
+          {step === 3 && <Step3Inputs />}
+          {step === 4 && <Step4Delivery />}
+        </div>
 
-      {error && (
-        <p className="text-red-400 text-[10px] font-bold uppercase tracking-widest text-center animate-pulse">
-          {error}
-        </p>
-      )}
+        {error && (
+          <p className="text-red-400 text-[10px] font-bold uppercase tracking-widest text-center animate-pulse">
+            {error}
+          </p>
+        )}
 
-      <div className="space-y-6">
-        <Navigation 
-          step={step} 
-          totalSteps={totalSteps} 
-          isLogin={isLogin}
-          loading={loading} 
-          onNext={handleNext} 
-          onBack={prevStep} 
-        />
-        <AuthToggle isLogin={false} onToggle={() => toggleMode(true)} />
+        <div className="space-y-6">
+          <Navigation 
+            step={step} 
+            totalSteps={totalSteps} 
+            isLogin={isLogin}
+            loading={loading} 
+            onNext={handleNext} 
+            onBack={prevStep} 
+          />
+          <AuthToggle isLogin={false} onToggle={() => toggleMode(true)} />
+        </div>
       </div>
-    </div>
+    </FormProvider>
   );
 }
