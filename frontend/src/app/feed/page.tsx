@@ -1,3 +1,11 @@
+/**
+ * @file Feed Page Orchestrator
+ * @module app/feed/page
+ * @description The main user interface for viewing curated news digests.
+ * Orchestrates domain-specific hooks (useAuth, useFeed) to provide a 
+ * real-time, semantically ranked technical news stream.
+ */
+
 'use client';
 
 import { useGlobalStore } from '@/core/store/use-global-store';
@@ -49,7 +57,7 @@ export default function FeedPage() {
 
   return (
     <div className="min-h-screen bg-background text-white selection:bg-white/5">
-      <Navbar onOpenSettings={() => setSettingsOpen(true)} />
+      <Navbar />
 
       <div className="max-w-4xl mx-auto px-6 flex items-center justify-end py-6 gap-6">
         <EmailToggle 

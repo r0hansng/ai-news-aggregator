@@ -1,3 +1,11 @@
+/**
+ * @file Onboarding Form Orchestrator
+ * @module features/onboarding/components/OnboardingForm
+ * @description Orchestrates the multi-step user initialization and login 
+ * flows. Handles mode switching between 'Onboarding' and 'Login' and 
+ * manages the sequential transition between configuration steps.
+ */
+
 'use client';
 
 import { useOnboardingForm } from '../hooks/use-onboarding-form';
@@ -32,7 +40,7 @@ export default function OnboardingForm() {
   if (isLogin) {
     return (
       <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-        <LoginForm form={form} loading={loading} error={error} onSubmit={onSubmit} />
+        <LoginForm />
         <AuthToggle isLogin={true} onToggle={() => toggleMode(false)} />
       </div>
     );
@@ -41,10 +49,10 @@ export default function OnboardingForm() {
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-left-4 duration-500">
       <div className="space-y-8">
-        {step === 1 && <Step1Identity form={form} />}
-        {step === 2 && <Step2Signal form={form} />}
-        {step === 3 && <Step3Inputs form={form} />}
-        {step === 4 && <Step4Delivery form={form} />}
+        {step === 1 && <Step1Identity />}
+        {step === 2 && <Step2Signal />}
+        {step === 3 && <Step3Inputs />}
+        {step === 4 && <Step4Delivery />}
       </div>
 
       {error && (
@@ -57,6 +65,7 @@ export default function OnboardingForm() {
         <Navigation 
           step={step} 
           totalSteps={totalSteps} 
+          isLogin={isLogin}
           loading={loading} 
           onNext={handleNext} 
           onBack={prevStep} 

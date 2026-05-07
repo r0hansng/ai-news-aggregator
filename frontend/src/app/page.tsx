@@ -1,3 +1,10 @@
+/**
+ * @file Home Page Component
+ * @module app/page
+ * @description The entry point of the AI News Aggregator. Handles landing page
+ * rendering and session-based redirection to the feed.
+ */
+
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -6,15 +13,26 @@ import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import Navbar from '@/shared/components/layout/Navbar';
 
+/**
+ * OnboardingForm - Dynamic Import
+ * @description We use dynamic loading for the onboarding form to reduce the
+ * initial bundle size and ensure hydration consistency for client-side state.
+ */
 const OnboardingForm = dynamic(() => import('@/features/onboarding/components/OnboardingForm'), {
   loading: () => <div className="h-[400px] flex items-center justify-center text-zinc-600 animate-pulse uppercase tracking-widest text-[10px] font-bold">Loading System...</div>,
   ssr: false
 });
 
+/**
+ * Home Component
+ * @returns {JSX.Element} The landing page UI with onboarding entry.
+ */
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
+    // Redirection Logic: If a user session is detected in the cookies,
+    // bypass the onboarding landing page and navigate directly to the feed.
     const userId = Cookies.get('ai_news_user_id');
     if (userId) {
       router.push('/feed');

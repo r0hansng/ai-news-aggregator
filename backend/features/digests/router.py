@@ -1,28 +1,43 @@
-from typing import Optional, Union, List, Dict, Any
+"""
+Digest Delivery Router
+======================
+
+This module provides the core API for the user's news feed. It orchestrates
+the retrieval of digests and invokes the AI Curator Agent for real-time
+semantic ranking based on the user's active session.
+"""
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.infra.database.connection import get_db
 from backend.features.digests.agents.curator_agent import CuratorAgent
 from backend.features.digests.repository import DigestRepository
 from backend.features.users.repository import UserRepository
-from .schema import DigestFeedResponse, DigestItem
-from .feedback_schema import FeedbackCreate, FeedbackResponse
+from backend.infra.database.connection import get_db
 from backend.infra.gatekeeper import gk
-from typing import List
+
+from .feedback_schema import FeedbackCreate, FeedbackResponse
+from .schema import DigestFeedResponse, DigestItem
+from backend.infra.cache.redis import cache
 
 router = APIRouter()
+
 
 @router.get("/latest", response_model=DigestFeedResponse)
 def get_latest_digests(
     x_user_id: str = Header(..., description="Unique ID of the user"),
     limit: int = 10,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Fetch the latest AI-ranked digests tailored to the user's expertise and interests.
     """
+    # Check cache first
+    cache_key = f"feed:{x_user_id}:{limit}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
     user_repo = UserRepository(db)
     digest_repo = DigestRepository(db)
     user = user_repo.get_user_by_id(x_user_id)
@@ -42,7 +57,7 @@ def get_latest_digests(
             "title": d.title,
             "summary": d.summary,
             "article_type": d.article_type,
-            "url": d.url
+            "url": d.url,
         }
         for d in all_digests
     ]
@@ -53,7 +68,7 @@ def get_latest_digests(
         "background": user.background,
         "expertise_level": user.expertise_level,
         "interests": user.interests,
-        "preferences": user.preferences
+        "preferences": user.preferences,
     }
 
     # 4. Use AI Curator to rank the digests (if enabled by Gatekeeper)
@@ -77,7 +92,7 @@ def get_latest_digests(
             summary=d.summary,
             article_type=d.article_type,
             url=d.url,
-            published_at=d.created_at
+            published_at=d.created_at,
         )
 
         # Attach AI ranking if available
@@ -95,17 +110,20 @@ def get_latest_digests(
     # Apply limit
     paginated_items = final_items[:limit]
 
-    return {
-        "items": paginated_items,
-        "count": len(paginated_items)
-    }
+    response = {"items": paginated_items, "count": len(paginated_items)}
+    
+    # Cache the response for 60 seconds (matches polling)
+    cache.set(cache_key, response, expire=60)
+
+    return response
+
 
 @router.post("/{id}/feedback", response_model=FeedbackResponse)
 def submit_digest_feedback(
     id: str,
     feedback_in: FeedbackCreate,
     x_user_id: str = Header(..., description="Unique ID of the user"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Submit feedback for a specific digest. This helps calibrate the AI curator's future rankings.
@@ -115,9 +133,13 @@ def submit_digest_feedback(
     if not user:
         raise HTTPException(status_code=404, detail="User profile not found")
 
+    # Invalidate user's feed cache on feedback
+    # We delete all limit variations for this user
+    # Simplified: just delete the most common ones or use pattern matching if needed
+    cache.delete(f"feed:{x_user_id}:10")
+    cache.delete(f"feed:{x_user_id}:15")
+    cache.delete(f"feed:{x_user_id}:20")
+
     return user_repo.create_feedback(
-        user_id=x_user_id,
-        digest_id=id,
-        rating=feedback_in.rating,
-        comment=feedback_in.comment
+        user_id=x_user_id, digest_id=id, rating=feedback_in.rating, comment=feedback_in.comment
     )

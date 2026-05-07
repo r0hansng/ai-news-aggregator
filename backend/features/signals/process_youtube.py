@@ -1,9 +1,19 @@
-from typing import Optional, Union, List, Dict, Any
+"""
+YouTube Signal Normalization
+============================
+
+This module implements the 'Transformation' phase for YouTube signals.
+It handles asynchronous transcript extraction and ensures that videos
+without available transcripts are appropriately marked to prevent 
+redundant retry cycles.
+"""
+
 import sys
-from typing import Optional, List, Dict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from typing import Dict, List, Optional
 
 from backend.features.signals.repository import SignalRepository
 from backend.features.signals.scrapers.youtube import YouTubeScraper
@@ -11,7 +21,7 @@ from backend.features.signals.scrapers.youtube import YouTubeScraper
 TRANSCRIPT_UNAVAILABLE_MARKER = "__UNAVAILABLE__"
 
 
-def process_youtube_channels(channel_ids: list[str], hours: int = 24):
+def process_youtube_channels(channel_ids: List[str], hours: int = 24):
     scraper = YouTubeScraper()
     repo = SignalRepository()
 
@@ -26,7 +36,8 @@ def process_youtube_channels(channel_ids: list[str], hours: int = 24):
 
     return total_new
 
-def process_youtube_transcripts(limit: Optional[int] = None) -> dict:
+
+def process_youtube_transcripts(limit: Optional[int] = None) -> Dict:
     scraper = YouTubeScraper()
     repo = SignalRepository()
 
@@ -53,7 +64,7 @@ def process_youtube_transcripts(limit: Optional[int] = None) -> dict:
         "total": len(videos),
         "processed": processed,
         "unavailable": unavailable,
-        "failed": failed
+        "failed": failed,
     }
 
 

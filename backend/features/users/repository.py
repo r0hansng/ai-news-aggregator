@@ -1,5 +1,13 @@
-from typing import Optional, Union, List, Dict, Any
-from typing import Optional, Union, List, Dict
+"""
+User Data Access Layer
+======================
+
+This module implements the Repository pattern for identity management.
+It encapsulates all CRUD operations for user profiles, technical personas,
+and calibration feedback.
+"""
+from __future__ import annotations
+from typing import Any, List, Optional
 from sqlalchemy.orm import Session
 
 from backend.infra.database.connection import get_session
@@ -10,10 +18,11 @@ from .model import User, UserFeedback
 class UserRepository:
     """
     Handles all persistent storage operations for User profiles and Feedback.
-    
+
     This repository encapsulates SQLAlchemy sessions to ensure that business logic
     remains decoupled from the underlying database implementation.
     """
+
     def __init__(self, session: Optional[Session] = None):
         """
         Initializes the repository with a session.
@@ -21,10 +30,22 @@ class UserRepository:
         """
         self.session = session or get_session()
 
-    def create_user(self, user_id: str, name: str, email: str, hashed_password: str = None, title: str = "", background: str = "", expertise_level: str = "Beginner", interests: list = None, preferences: dict = None, youtube_channels: list = None) -> Optional[User]:
+    def create_user(
+        self,
+        user_id: str,
+        name: str,
+        email: str,
+        hashed_password: str = None,
+        title: str = "",
+        background: str = "",
+        expertise_level: str = "Beginner",
+        interests: list = None,
+        preferences: dict = None,
+        youtube_channels: list = None,
+    ) -> Optional[User]:
         """
         Creates a new user record in the system.
-        
+
         Args:
             user_id: Pre-generated UUID for the user.
             name: Full name.
@@ -36,7 +57,7 @@ class UserRepository:
             interests: List of technical topics to track.
             preferences: JSON blob of delivery and AI tuning preferences.
             youtube_channels: List of YouTube channel IDs to monitor.
-            
+
         Returns:
             The created User object or None if the email already exists.
         """
@@ -54,13 +75,13 @@ class UserRepository:
             expertise_level=expertise_level,
             interests=interests or [],
             preferences=preferences or {},
-            youtube_channels=youtube_channels or []
+            youtube_channels=youtube_channels or [],
         )
         self.session.add(user)
         self.session.commit()
         return user
 
-    def get_all_users(self) -> list[User]:
+    def get_all_users(self) -> List[User]:
         return self.session.query(User).all()
 
     def get_user_by_id(self, user_id: str) -> Optional[User]:
@@ -69,7 +90,9 @@ class UserRepository:
     def get_user_by_email(self, email: str) -> Optional[User]:
         return self.session.query(User).filter_by(email=email).first()
 
-    def update_user_signals(self, user_id: str, interests: list[str] = None, youtube_channels: list[str] = None) -> Optional[User]:
+    def update_user_signals(
+        self, user_id: str, interests: List[str] = None, youtube_channels: List[str] = None
+    ) -> Optional[User]:
         user = self.get_user_by_id(user_id)
         if not user:
             return None
@@ -99,7 +122,15 @@ class UserRepository:
         if not user:
             return None
 
-        allowed = {"name", "title", "background", "expertise_level", "interests", "youtube_channels", "preferences"}
+        allowed = {
+            "name",
+            "title",
+            "background",
+            "expertise_level",
+            "interests",
+            "youtube_channels",
+            "preferences",
+        }
         for key, value in fields.items():
             if key in allowed and value is not None:
                 setattr(user, key, value)
@@ -117,14 +148,17 @@ class UserRepository:
         self.session.commit()
         return True
 
-    def create_feedback(self, user_id: str, digest_id: str, rating: str, comment: str = None) -> UserFeedback:
+    def create_feedback(
+        self, user_id: str, digest_id: str, rating: str, comment: str = None
+    ) -> Optional[UserFeedback]:
         import uuid
+
         feedback = UserFeedback(
             id=str(uuid.uuid4()),
             user_id=user_id,
             digest_id=digest_id,
             rating=rating,
-            comment=comment
+            comment=comment,
         )
         self.session.add(feedback)
         self.session.commit()

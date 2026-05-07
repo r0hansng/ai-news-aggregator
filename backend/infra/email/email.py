@@ -1,6 +1,20 @@
-from typing import Optional, Union, List, Dict, Any
+"""
+Email Delivery Infrastructure
+=============================
+
+This module provides the core delivery engine for the AI News Aggregator.
+It handles HTML template rendering and SMTP transmission via FastAPI-Mail.
+
+Design Pattern: Template-as-Code
+--------------------------------
+To maintain sub-second performance and avoid complex template management,
+we use Python f-strings for HTML generation. In a larger production 
+environment, this would be swapped for Jinja2 or a headless CMS.
+"""
+
 import logging
 import os
+from typing import Any
 
 from dotenv import load_dotenv
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
@@ -23,6 +37,7 @@ class EmailConfig:
     USE_CREDENTIALS = True
     VALIDATE_CERTS = True
 
+
 conf = ConnectionConfig(
     MAIL_USERNAME=EmailConfig.MAIL_USERNAME,
     MAIL_PASSWORD=EmailConfig.MAIL_PASSWORD,
@@ -33,13 +48,14 @@ conf = ConnectionConfig(
     MAIL_STARTTLS=EmailConfig.MAIL_STARTTLS,
     MAIL_SSL_TLS=EmailConfig.MAIL_SSL_TLS,
     USE_CREDENTIALS=EmailConfig.USE_CREDENTIALS,
-    VALIDATE_CERTS=EmailConfig.VALIDATE_CERTS
+    VALIDATE_CERTS=EmailConfig.VALIDATE_CERTS,
 )
+
 
 def digest_to_html(digest: Any) -> str:
     """
     Converts an EmailDigest Pydantic model into a clean HTML newsletter.
-    
+
     This function acts as the 'Template Engine' for the curation system.
     """
     html = f"""
@@ -50,7 +66,7 @@ def digest_to_html(digest: Any) -> str:
             <p>{digest.intro.introduction}</p>
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
     """
-    
+
     for article in digest.articles:
         html += f"""
             <div style="margin-bottom: 30px; padding: 15px; background-color: #f9fafb; border-radius: 8px;">
@@ -61,8 +77,8 @@ def digest_to_html(digest: Any) -> str:
                 <a href="{article.url}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px;">Read Full Article →</a>
             </div>
         """
-        
-    html += f"""
+
+    html += """
             <p style="font-size: 12px; color: #9ca3af; text-align: center; margin-top: 30px;">
                 You're receiving this because you enabled email updates.<br>
                 To unsubscribe, change your settings in the AI News Aggregator app.
@@ -72,17 +88,15 @@ def digest_to_html(digest: Any) -> str:
     """
     return html
 
-async def send_email(subject: str, body_text: str, body_html: str, recipients: List[str]):
+
+async def send_email(subject: str, body_text: str, body_html: str, recipients: list[str]):
     """
     Transmits an email using the FastMail client.
-    
+
     In development mode (mock_user), it writes the HTML to a local file for inspection.
     """
     message = MessageSchema(
-        subject=subject,
-        recipients=recipients,
-        body=body_html,
-        subtype=MessageType.html
+        subject=subject, recipients=recipients, body=body_html, subtype=MessageType.html
     )
 
     fm = FastMail(conf)

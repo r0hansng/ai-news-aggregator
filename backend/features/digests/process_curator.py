@@ -1,4 +1,3 @@
-from typing import Optional, Union, List, Dict, Any
 import logging
 import sys
 from pathlib import Path
@@ -14,13 +13,14 @@ from backend.features.digests.repository import DigestRepository
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
+from typing import Dict, Optional
 
-def curate_digests(hours: int = 24, user_profile: dict = None) -> dict:
+def curate_digests(hours: int = 24, user_profile: Optional[Dict] = None) -> Dict:
     profile = user_profile or {"name": "System", "background": "General AI Technical News"}
     curator = CuratorAgent(profile)
     repo = DigestRepository()
@@ -60,10 +60,10 @@ def curate_digests(hours: int = 24, user_profile: dict = None) -> dict:
                 "digest_id": a.digest_id,
                 "rank": a.rank,
                 "relevance_score": a.relevance_score,
-                "reasoning": a.reasoning
+                "reasoning": a.reasoning,
             }
             for a in ranked_articles
-        ]
+        ],
     }
 
 

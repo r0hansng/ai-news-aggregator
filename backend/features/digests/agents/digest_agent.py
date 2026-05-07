@@ -1,6 +1,19 @@
-from typing import Optional, Union, List, Dict, Any
+"""
+Digest Summarization Agent
+==========================
+
+This module implements the 'Synthesis' layer of the curation pipeline.
+It uses high-performance LLMs to distill raw technical signals 
+(e.g., transcripts, long-form research) into concise, high-integrity digests.
+
+Rationale:
+Automated summarization ensures that users can stay informed across 
+multiple hours of technical content in just a few minutes of reading.
+"""
+from __future__ import annotations
 import json
 import os
+from typing import Any, Optional
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -30,9 +43,11 @@ class DigestAgent:
             base_url="https://api.groq.com/openai/v1",
         )
         # We use Llama 3.1 70B for high-quality technical summarization of research papers and transcripts.
-        self.model = "llama-3.1-70b-versatile" 
+        self.model = "llama-3.1-70b-versatile"
 
-    def generate_digest(self, title: str, content: str, article_type: str) -> Optional[DigestResult]:
+    def generate_digest(
+        self, title: str, content: str, article_type: str
+    ) -> Optional[DigestResult]:
         if not content or not content.strip():
             return None
 

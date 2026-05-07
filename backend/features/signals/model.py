@@ -1,4 +1,17 @@
-from typing import Optional, Union, List, Dict, Any
+"""
+Signal Domain Models
+====================
+
+This module defines the primary entities for 'Signals' (raw technical news items).
+We maintain separate tables for each source (YouTube, OpenAI, Anthropic) 
+to accommodate source-specific metadata (e.g., transcripts for videos, 
+markdown for blog posts).
+
+Rationale:
+Storing raw signals separately from curated digests allows us to perform
+historical analysis and model retraining on the complete ingestion stream.
+"""
+
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, String, Text
@@ -18,6 +31,7 @@ class YouTubeVideo(Base):
     transcript = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
 class OpenAIArticle(Base):
     __tablename__ = "openai_articles"
 
@@ -28,6 +42,7 @@ class OpenAIArticle(Base):
     published_at = Column(DateTime, nullable=False)
     category = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
 
 class AnthropicArticle(Base):
     __tablename__ = "anthropic_articles"

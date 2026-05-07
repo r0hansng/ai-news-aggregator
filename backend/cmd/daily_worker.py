@@ -1,28 +1,29 @@
-from typing import Optional, Union, List, Dict, Any
 """
 Daily Orchestration Pipeline
 ============================
 
-This script is the main 'Brain' of the scheduled operations. It coordinates 
-the sequential execution of scraping, transcript processing, AI digestion, 
-and final email delivery.
+This module serves as the primary 'DAG' (Directed Acyclic Graph) for the 
+AI News Aggregator's scheduled operations. It coordinates the complex
+multi-step process of scraping, normalization, and delivery.
 
-Execution:
-    $ python -m app.cmd.daily_worker 168 5
-
-Note: This is designed to be run as a daily Cron job or a k8s CronJob.
+Operational Flow:
+-----------------
+1. Extraction: Trigger source scrapers.
+2. Normalization: Convert raw signals into structured technical markdown.
+3. Transcript Synthesis: Resolve YouTube technical transcripts.
+4. Semantic Ranking: Invoke AI Curator Agent for personalized ranking.
+5. Dispatch: Transmit curated digests via the Email Engine.
 """
 import time
-from typing import Optional, Union, List, Dict
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from backend.cmd.worker import run_scrapers
-from backend.features.signals.process_anthropic import process_anthropic_markdown
 from backend.features.digests.process_digest import process_digests
 from backend.features.digests.process_email import send_digest_emails
+from backend.features.signals.process_anthropic import process_anthropic_markdown
 from backend.features.signals.process_youtube import process_youtube_transcripts
 
 
@@ -33,13 +34,7 @@ def run_daily_pipeline(hours=24, top_n=10):
     print("Starting Daily AI News Aggregator Pipeline")
     print("=" * 50)
 
-    results = {
-        "success": False,
-        "scraping": {},
-        "processing": {},
-        "digests": {},
-        "email": {}
-    }
+    results = {"success": False, "scraping": {}, "processing": {}, "digests": {}, "email": {}}
 
     try:
         print("\n[1/5] Scraping articles...")
@@ -47,27 +42,36 @@ def run_daily_pipeline(hours=24, top_n=10):
         results["scraping"] = {
             "youtube": len(scraped.get("youtube", [])),
             "openai": len(scraped.get("openai", [])),
-            "anthropic": len(scraped.get("anthropic", []))
+            "anthropic": len(scraped.get("anthropic", [])),
         }
-        print(f"Scraped {results['scraping']['youtube']} YouTube, {results['scraping']['openai']} OpenAI, {results['scraping']['anthropic']} Anthropic")
+        print(
+            f"Scraped {results['scraping']['youtube']} YouTube, {results['scraping']['openai']} OpenAI, {results['scraping']['anthropic']} Anthropic"
+        )
 
         print("\n[2/5] Processing Anthropic markdown...")
         anthropic_result = process_anthropic_markdown()
         results["processing"]["anthropic"] = anthropic_result
-        print(f"Processed {anthropic_result['processed']} Anthropic articles ({anthropic_result['failed']} failed)")
+        print(
+            f"Processed {anthropic_result['processed']} Anthropic articles ({anthropic_result['failed']} failed)"
+        )
 
         print("\n[3/5] Processing YouTube transcripts...")
         yt_result = process_youtube_transcripts()
         results["processing"]["youtube"] = yt_result
-        print(f"Processed {yt_result['processed']} transcripts ({yt_result['unavailable']} unavailable)")
+        print(
+            f"Processed {yt_result['processed']} transcripts ({yt_result['unavailable']} unavailable)"
+        )
 
         print("\n[4/5] Creating digests...")
         digest_result = process_digests()
         results["digests"] = digest_result
-        print(f"Created {digest_result['processed']} digests ({digest_result['failed']} failed out of {digest_result['total']})")
+        print(
+            f"Created {digest_result['processed']} digests ({digest_result['failed']} failed out of {digest_result['total']})"
+        )
 
         print("\n[5/5] Sending email digests...")
         import asyncio
+
         email_result = asyncio.run(send_digest_emails(hours=hours, top_n=top_n))
         results["email"] = email_result
 
@@ -93,6 +97,7 @@ def run_daily_pipeline(hours=24, top_n=10):
 
     return results
 
+
 import sys
 
 if __name__ == "__main__":
@@ -100,4 +105,3 @@ if __name__ == "__main__":
     top_n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
     result = run_daily_pipeline(hours=hours, top_n=top_n)
     exit(0 if result["success"] else 1)
-

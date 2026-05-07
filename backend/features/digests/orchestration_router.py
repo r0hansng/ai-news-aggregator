@@ -1,22 +1,24 @@
-from typing import Optional, Union, List, Dict, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from backend.infra.database.connection import get_db
-from backend.features.users.repository import UserRepository
 from backend.features.digests.process_curator import curate_digests
 from backend.features.digests.process_digest import process_digests
 from backend.features.signals.process_youtube import process_youtube_channels
 from backend.features.signals.scrape_articles import scrape_all_articles
-from pydantic import BaseModel
+from backend.features.users.repository import UserRepository
+from backend.infra.database.connection import get_db
+
 
 class RefreshResponse(BaseModel):
     message: str
     user_id: str
     status: str
 
+
 router = APIRouter()
+
 
 def run_pipeline(user_id: str, db_session: Session):
     """
@@ -28,7 +30,11 @@ def run_pipeline(user_id: str, db_session: Session):
         return
 
     if user.youtube_channels:
-        channel_ids = [ch["id"] if isinstance(ch, dict) else ch for ch in user.youtube_channels if (isinstance(ch, dict) and ch.get("id")) or isinstance(ch, str)]
+        channel_ids = [
+            ch["id"] if isinstance(ch, dict) else ch
+            for ch in user.youtube_channels
+            if (isinstance(ch, dict) and ch.get("id")) or isinstance(ch, str)
+        ]
         process_youtube_channels(channel_ids, hours=500)
 
     scrape_all_articles(hours=500)
@@ -40,15 +46,16 @@ def run_pipeline(user_id: str, db_session: Session):
         "background": user.background,
         "expertise_level": user.expertise_level,
         "interests": user.interests,
-        "preferences": user.preferences
+        "preferences": user.preferences,
     }
     curate_digests(hours=500, user_profile=user_profile)
+
 
 @router.post("/refresh", response_model=RefreshResponse, status_code=status.HTTP_202_ACCEPTED)
 async def trigger_pipeline_refresh(
     background_tasks: BackgroundTasks,
     x_user_id: str = Header(..., description="Unique ID of the user"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Manually trigger a full refresh of the AI assistant's signals and news feed.
@@ -65,5 +72,5 @@ async def trigger_pipeline_refresh(
     return {
         "message": "Orchestration pipeline triggered successfully.",
         "user_id": x_user_id,
-        "status": "processing"
+        "status": "processing",
     }

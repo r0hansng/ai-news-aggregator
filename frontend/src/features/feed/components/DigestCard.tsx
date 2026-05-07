@@ -15,17 +15,7 @@ import { ExternalLink, ThumbsUp, ThumbsDown, Youtube, Globe, Cpu } from 'lucide-
  * - Title is semantic `<h3>` (screen readers).\n * - Button accessible: keyboard + screen reader support.\n * - Color + icon for feedback (not icon alone).\n *\n * **Performance**:
  * - O(1) render per item.\n * - Framer Motion: GPU-accelerated transforms (60fps).\n * - List rendering: React.memo recommended if list > 50 items.\n */
 
-interface DigestItem {
-  id: string;
-  title: string;
-  content: string;
-  summary: string;
-  url: string;
-  rank_score: number;
-  source_type: string;
-  source_name: string;
-  created_at: string;
-}
+import { DigestItem } from '../api';
 
 interface DigestCardProps {
   item: DigestItem;
@@ -67,14 +57,14 @@ export const DigestCard = ({ item, index, feedbackStatus, onFeedback }: DigestCa
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-zinc-800/50 rounded-xl">
-              {getSourceIcon(item.source_type)}
+              {getSourceIcon(item.article_type)}
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
-                {item.source_name}
+                {item.article_type}
               </p>
               <p className="text-[8px] uppercase tracking-widest text-zinc-600">
-                {new Date(item.created_at).toLocaleDateString()}
+                {new Date(item.published_at).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -108,7 +98,9 @@ export const DigestCard = ({ item, index, feedbackStatus, onFeedback }: DigestCa
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
               <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-400">Signal Strength</span>
-              <span className="text-[10px] font-mono text-white">{(item.rank_score * 100).toFixed(0)}%</span>
+              <span className="text-[10px] font-mono text-white">
+                {item.relevance_score ? `${(item.relevance_score * 100).toFixed(0)}%` : 'TBD'}
+              </span>
             </div>
           </div>
 

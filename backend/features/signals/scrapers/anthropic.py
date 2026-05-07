@@ -1,7 +1,15 @@
-from typing import Optional, Union, List, Dict, Any
-from datetime import datetime, timedelta, timezone
-from typing import Optional, List, Dict
+"""
+Anthropic News Ingestion
+========================
 
+This module provides specialized scrapers for Anthropic's News, Research,
+and Engineering blogs. It leverages external RSS mirrors and the Docling 
+converter for technical content extraction.
+"""
+
+from datetime import datetime, timedelta, timezone
+
+from typing import List, Optional
 import feedparser
 from docling.document_converter import DocumentConverter
 from pydantic import BaseModel
@@ -25,7 +33,7 @@ class AnthropicScraper:
         ]
         self.converter = DocumentConverter()
 
-    def get_articles(self, hours: int = 24) -> list[AnthropicArticle]:
+    def get_articles(self, hours: int = 24) -> List[AnthropicArticle]:
         now = datetime.now(timezone.utc)
         cutoff_time = now - timedelta(hours=hours)
         articles = []
@@ -46,14 +54,18 @@ class AnthropicScraper:
                     guid = entry.get("id", entry.get("link", ""))
                     if guid not in seen_guids:
                         seen_guids.add(guid)
-                        articles.append(AnthropicArticle(
-                            title=entry.get("title", ""),
-                            description=entry.get("description", ""),
-                            url=entry.get("link", ""),
-                            guid=guid,
-                            published_at=published_time,
-                            category=entry.get("tags", [{}])[0].get("term") if entry.get("tags") else None
-                        ))
+                        articles.append(
+                            AnthropicArticle(
+                                title=entry.get("title", ""),
+                                description=entry.get("description", ""),
+                                url=entry.get("link", ""),
+                                guid=guid,
+                                published_at=published_time,
+                                category=entry.get("tags", [{}])[0].get("term")
+                                if entry.get("tags")
+                                else None,
+                            )
+                        )
 
         return articles
 
@@ -64,8 +76,9 @@ class AnthropicScraper:
         except Exception:
             return None
 
+
 if __name__ == "__main__":
     scraper = AnthropicScraper()
-    articles: list[AnthropicArticle] = scraper.get_articles(hours=100)
+    articles: List[AnthropicArticle] = scraper.get_articles(hours=100)
     markdown: str = scraper.url_to_markdown(articles[1].url)
     print(markdown)

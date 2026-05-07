@@ -6,7 +6,7 @@ import { Select } from '@/shared/components/ui/Select';
 import { Textarea } from '@/shared/components/ui/Textarea';
 import { OnboardingFormValues } from '../types';
 
-export function Step2Signal() {
+export default function Step2Signal() {
   const { register } = useFormContext<OnboardingFormValues>();
   const sectionTitle = "text-lg font-serif font-medium text-white mb-6";
 

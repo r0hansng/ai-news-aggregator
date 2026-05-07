@@ -19,11 +19,13 @@ TOP_N     ?= 10   # Quantity of signals in email (override: make run TOP_N=5)
 .DEFAULT_GOAL := help
 .PHONY: help \
         install sync add lock upgrade \
-        db-up db-down db-reset db-init db-shell \
+        db-up db-down db-reset db-migrate db-history db-shell \
+        redis-cli redis-flush \
         fe-install fe-dev \
         scrape process-anthropic process-youtube \
         digest curator email \
         run run-dry \
+        test test-backend test-frontend test-e2e \
         lint format \
         clean
 
@@ -79,12 +81,29 @@ db-reset: ## Maintenance: Terminate services AND purge all volumes (destructive)
 db-logs: ## Debug: Stream real-time container logs to terminal
 	$(COMPOSE) logs -f
 
-db-init: ## Bootstrap: Initialize relational schema (run after db-up)
-	$(PYTHON) -m backend.infra.database.create_tables
+db-migrate: ## Migration: Apply all pending database schema updates (Alembic)
+	cd backend && export DATABASE_URL="postgresql://$${POSTGRES_USER:-postgres}:$${POSTGRES_PASSWORD:-postgres}@localhost:$${POSTGRES_PORT:-5432}/$${POSTGRES_DB:-ai_news_aggregator}" && $(UV) run alembic upgrade head
+
+db-history: ## Migration: Show all database version history
+	cd backend && $(UV) run alembic history --verbose
+
+db-init: db-migrate ## Bootstrap: Initialize schema and stamp version (first run)
+	@echo "  Database schema fully synchronized."
 
 db-shell: ## Access: Enter interactive psql shell inside the container
 	docker exec -it ai-news-aggregator-db \
 		psql -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-ai_news_aggregator}
+
+# ==============================================================================
+# Cache Management (Redis)
+# ==============================================================================
+
+redis-cli: ## Access: Open interactive Redis CLI
+	docker exec -it ai-news-aggregator-cache redis-cli
+
+redis-flush: ## Maintenance: Purge all cached data (all users)
+	docker exec -it ai-news-aggregator-cache redis-cli flushall
+	@echo "  Cache successfully purged."
 
 # ==============================================================================
 # Frontend Orchestration (Bun)
@@ -122,8 +141,11 @@ email: ## Step 6: Dispatch curated signals via email delivery engine
 # Integrated Workflow
 # ==============================================================================
 
-run: ## Production: Execute the comprehensive daily signal pipeline
+run: ## Production: Execute the comprehensive daily signal pipeline (Synchronous)
 	$(PYTHON) -m backend.cmd.daily_worker $(HOURS) $(TOP_N)
+
+run-async: ## Production: Execute the distributed signal pipeline (Celery)
+	$(PYTHON) -m backend.cmd.async_daily_worker $(HOURS) $(TOP_N)
 
 run-dry: ## Validation: Execute scraping and processing only (no delivery)
 	@echo ">>> [1/3] Triggering Signal Scrapers..."
@@ -143,6 +165,21 @@ lint: ## Quality: Audit code for style and logical errors (Ruff)
 
 format: ## Quality: Auto-enforce standard code formatting (Ruff)
 	$(UV) --project backend run ruff format backend/
+
+# ==============================================================================
+# Testing & Validation
+# ==============================================================================
+
+test-backend: ## Test: Run backend unit and integration tests
+	PYTHONPATH=. $(UV) --project backend run pytest backend/tests
+
+test-frontend: ## Test: Run frontend logic tests (Vitest)
+	cd frontend && bun x vitest run
+
+test-e2e: ## Test: Run Playwright E2E tests (requires dev server)
+	cd frontend && npx playwright test
+
+test: test-backend test-frontend ## Test: Run all backend and frontend unit tests
 
 # ==============================================================================
 # System Housekeeping

@@ -1,4 +1,3 @@
-from typing import Optional, Union, List, Dict, Any
 import logging
 import os
 
@@ -14,8 +13,8 @@ from backend.infra.email.email import digest_to_html, send_email
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -29,7 +28,7 @@ def generate_email_digest_for_user(user, digests, top_n: int = 10) -> EmailDiges
         "background": user.background,
         "expertise_level": user.expertise_level,
         "interests": user.interests,
-        "preferences": user.preferences
+        "preferences": user.preferences,
     }
 
     curator = CuratorAgent(user_profile)
@@ -43,23 +42,23 @@ def generate_email_digest_for_user(user, digests, top_n: int = 10) -> EmailDiges
 
     for a in ranked:
         d = digest_map.get(a.digest_id, {})
-        article_details.append(ArticleDetail(
-            digest_id=a.digest_id,
-            rank=a.rank,
-            relevance_score=a.relevance_score,
-            reasoning=a.reasoning,
-            title=d.get("title", ""),
-            summary=d.get("summary", ""),
-            url=d.get("url", ""),
-            article_type=d.get("article_type", ""),
-        ))
+        article_details.append(
+            ArticleDetail(
+                digest_id=a.digest_id,
+                rank=a.rank,
+                relevance_score=a.relevance_score,
+                reasoning=a.reasoning,
+                title=d.get("title", ""),
+                summary=d.get("summary", ""),
+                url=d.get("url", ""),
+                article_type=d.get("article_type", ""),
+            )
+        )
 
     logger.info(f"Building email with top {top_n} articles for {user.name}")
     email_agent = EmailAgent(user_profile)
     digest = email_agent.build_digest(
-        ranked_articles=article_details,
-        total_ranked=len(ranked),
-        limit=top_n
+        ranked_articles=article_details, total_ranked=len(ranked), limit=top_n
     )
 
     return digest
@@ -79,8 +78,8 @@ async def send_digest_emails(hours: int = 24, top_n: int = 10) -> dict:
         logger.warning(f"No digests found from the last {hours} hours")
         return {"success": False, "error": "No digests available"}
 
-    app_env = os.getenv("APP_ENV", "development").lower()
-    my_email = os.getenv("MY_EMAIL")
+    os.getenv("APP_ENV", "development").lower()
+    os.getenv("MY_EMAIL")
 
     success_count = 0
     failed_count = 0
@@ -95,7 +94,6 @@ async def send_digest_emails(hours: int = 24, top_n: int = 10) -> dict:
 
             subject = f"Daily AI News Digest - {digest.intro.greeting.split('for ')[-1] if 'for ' in digest.intro.greeting else 'Today'}"
 
-
             recipient = user.email
             logger.info(f"Sending email for {user.name} to {recipient}")
 
@@ -103,7 +101,7 @@ async def send_digest_emails(hours: int = 24, top_n: int = 10) -> dict:
                 subject=f"[{user.name}] {subject}",
                 body_text=digest.to_markdown(),
                 body_html=digest_to_html(digest),
-                recipients=[recipient]
+                recipients=[recipient],
             )
             success_count += 1
             logger.info(f"Email sent for {user.name}!")
@@ -115,7 +113,7 @@ async def send_digest_emails(hours: int = 24, top_n: int = 10) -> dict:
     return {
         "success": success_count > 0,
         "success_count": success_count,
-        "failed_count": failed_count
+        "failed_count": failed_count,
     }
 
 

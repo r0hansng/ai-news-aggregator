@@ -1,7 +1,19 @@
-from typing import Optional, Union, List, Dict, Any
+"""
+Database Health & Integrity Check
+=================================
+
+This module provides a lightweight diagnostic tool to verify the current 
+state of the database. It counts records across all primary entities
+and prints a sample to verify schema accessibility.
+
+Rationale:
+In production debugging, having a 'pre-flight' check script saves time
+when diagnosing environment-specific connectivity or schema issues.
+"""
+
+from backend.features.users.model import User
 from backend.infra.database.connection import get_session
 from backend.infra.database.models import AnthropicArticle, Digest, OpenAIArticle, YouTubeVideo
-from backend.features.users.model import User
 
 session = get_session()
 

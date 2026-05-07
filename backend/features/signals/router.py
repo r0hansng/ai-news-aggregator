@@ -1,18 +1,28 @@
-from typing import Optional, Union, List, Dict, Any
+"""
+Signal Management Router
+========================
+
+This module provides the API surface for managing user-specific news sources
+and technical interests. It enables real-time resolution of YouTube channels
+and dynamic updates to the ingestion whitelist.
+"""
+
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List, Optional
 
-from backend.infra.database.connection import get_db
 from backend.features.signals.scrapers.youtube import YouTubeScraper
 from backend.features.users.repository import UserRepository
+from backend.infra.database.connection import get_db
+
 from .schema import SignalResponse, TopicAdd, YouTubeAdd
 
 router = APIRouter()
 
+
 @router.get("/resolve-youtube", response_model=dict)
 def resolve_youtube_channel(
-    handle: str,
-    x_user_id: Optional[str] = Header(None, description="Unique ID of the user")
+    handle: str, x_user_id: Optional[str] = Header(None, description="Unique ID of the user")
 ):
     """
     Resolves a YouTube handle or name to a Channel ID.
@@ -22,16 +32,15 @@ def resolve_youtube_channel(
 
     if not result or not result.get("channel_id"):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Could not resolve channel for: {handle}"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Could not resolve channel for: {handle}"
         )
 
     return result
 
+
 @router.get("/", response_model=SignalResponse)
 def get_user_signals(
-    x_user_id: str = Header(..., description="Unique ID of the user"),
-    db: Session = Depends(get_db)
+    x_user_id: str = Header(..., description="Unique ID of the user"), db: Session = Depends(get_db)
 ):
     """
     Fetch all active technical interests and YouTube signals for the user.
@@ -44,11 +53,12 @@ def get_user_signals(
 
     return user
 
+
 @router.post("/interests", response_model=SignalResponse)
 def add_interest(
     topic_in: TopicAdd,
     x_user_id: str = Header(..., description="Unique ID of the user"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Add a new technical topic to the user's tracking list.
@@ -66,11 +76,12 @@ def add_interest(
     new_interests = list(user.interests) + [topic_in.topic]
     return user_repo.update_user_signals(x_user_id, interests=new_interests)
 
+
 @router.post("/youtube", response_model=SignalResponse)
 def add_youtube_channel(
     channel_in: YouTubeAdd,
     x_user_id: str = Header(..., description="Unique ID of the user"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Connect a new YouTube channel for the AI assistant to monitor.
@@ -87,11 +98,12 @@ def add_youtube_channel(
     new_channels = list(user.youtube_channels) + [channel_in.channel_id]
     return user_repo.update_user_signals(x_user_id, youtube_channels=new_channels)
 
+
 @router.delete("/youtube/{channel_id}", response_model=SignalResponse)
 def remove_youtube_channel(
     channel_id: str,
     x_user_id: str = Header(..., description="Unique ID of the user"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Disconnect a YouTube channel from the monitoring list.

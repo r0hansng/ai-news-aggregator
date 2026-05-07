@@ -1,4 +1,3 @@
-from typing import Optional, Union, List, Dict, Any
 import sys
 from pathlib import Path
 
@@ -31,9 +30,7 @@ def process_digests(limit=None):
 
         try:
             digest = agent.generate_digest(
-                title=title,
-                content=article["content"],
-                article_type=article_type
+                title=title, content=article["content"], article_type=article_type
             )
 
             if digest:
@@ -43,7 +40,7 @@ def process_digests(limit=None):
                     url=article["url"],
                     title=digest.title,
                     summary=digest.summary,
-                    published_at=article.get("published_at")
+                    published_at=article.get("published_at"),
                 )
                 processed += 1
                 print(f"✓ Created digest for {article_type} {article_id}")
@@ -56,13 +53,11 @@ def process_digests(limit=None):
 
     print(f"Done: {processed} processed, {failed} failed out of {total}")
 
-    return {
-        "total": total,
-        "processed": processed,
-        "failed": failed
-    }
+    return {"total": total, "processed": processed, "failed": failed}
+
 
 if __name__ == "__main__":
     result = process_digests()
-    print(f"Total: {result['total']} | Processed: {result['processed']} | Failed: {result['failed']}")
-
+    print(
+        f"Total: {result['total']} | Processed: {result['processed']} | Failed: {result['failed']}"
+    )

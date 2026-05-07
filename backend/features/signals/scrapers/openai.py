@@ -1,7 +1,15 @@
-from typing import Optional, Union, List, Dict, Any
-from datetime import datetime, timedelta, timezone
-from typing import Optional, List, Dict
+"""
+OpenAI News Ingestion
+=====================
 
+This module provides a scraper for the official OpenAI News blog.
+It monitors the RSS feed for new announcements and prepares them for
+semantic analysis.
+"""
+
+from datetime import datetime, timedelta, timezone
+
+from typing import List, Optional
 import feedparser
 from docling.document_converter import DocumentConverter
 from pydantic import BaseModel
@@ -21,7 +29,7 @@ class OpenAIScraper:
         self.rss_url = "https://openai.com/news/rss.xml"
         self.converter = DocumentConverter()
 
-    def get_articles(self, hours: int = 24) -> list[OpenAIArticle]:
+    def get_articles(self, hours: int = 24) -> List[OpenAIArticle]:
         feed = feedparser.parse(self.rss_url)
         if not feed.entries:
             return []
@@ -37,14 +45,18 @@ class OpenAIScraper:
 
             published_time = datetime(*published_parsed[:6], tzinfo=timezone.utc)
             if published_time >= cutoff_time:
-                articles.append(OpenAIArticle(
-                    title=entry.get("title", ""),
-                    description=entry.get("description", ""),
-                    url=entry.get("link", ""),
-                    guid=entry.get("id", entry.get("link", "")),
-                    published_at=published_time,
-                    category=entry.get("tags", [{}])[0].get("term") if entry.get("tags") else None
-                ))
+                articles.append(
+                    OpenAIArticle(
+                        title=entry.get("title", ""),
+                        description=entry.get("description", ""),
+                        url=entry.get("link", ""),
+                        guid=entry.get("id", entry.get("link", "")),
+                        published_at=published_time,
+                        category=entry.get("tags", [{}])[0].get("term")
+                        if entry.get("tags")
+                        else None,
+                    )
+                )
 
         return articles
 

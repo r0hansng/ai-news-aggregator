@@ -4,6 +4,40 @@
 
 The AI News Aggregator backend is a high-performance, event-driven system built with FastAPI and Python 3.11+. It orchestrates intelligent signal curation, processing, and delivery through a modular architecture following domain-driven design principles.
 
+### System Architecture
+
+```mermaid
+graph TD
+    subgraph External Sources
+        YT[YouTube API]
+        OA[OpenAI Blog]
+        AN[Anthropic Blog]
+    end
+
+    subgraph Ingestion Layer
+        WS[Worker Scrapers]
+        SR[Signal Repository]
+    end
+
+    subgraph Processing Layer
+        CA[Curator Agent - Llama 3.3]
+        DA[Digest Agent]
+        EA[Email Agent]
+    end
+
+    subgraph Storage
+        DB[(PostgreSQL)]
+    end
+
+    External Sources --> WS
+    WS --> SR
+    SR --> DB
+    DB --> CA
+    CA --> DA
+    DA --> EA
+    EA --> Email((User Email))
+```
+
 ## Technology Stack
 
 | Layer | Technology | Version | Purpose |

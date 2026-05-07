@@ -2,206 +2,84 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![Node 18+](https://img.shields.io/badge/Node-18%2B-green.svg)](https://nodejs.org/)
+[![Bun](https://img.shields.io/badge/Bun-1.1-black.svg)](https://bun.sh/)
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009485.svg)](https://fastapi.tiangolo.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
+[![Redis](https://img.shields.io/badge/Redis-7.0-red.svg)](https://redis.io/)
+[![Celery](https://img.shields.io/badge/Celery-5.3-green.svg)](https://docs.celeryq.dev/)
 
-An intelligent news aggregation platform that leverages AI to curate, rank, and deliver personalized news digests through multiple channels. Built with production-grade architecture for scalability and maintainability.
+An intelligent news aggregation platform that leverages AI to curate, rank, and deliver personalized news digests. Built with a high-scale, distributed architecture to handle 10,000+ active users.
 
-## Overview
+## 🚀 High-Scale Architecture
 
-AI News Aggregator is a full-stack application designed to solve information overload by:
+| Component | Technology | Role |
+|-----------|-----------|------|
+| **API Layer** | FastAPI (Python 3.11) | High-concurrency ASGI server with Gunicorn workers. |
+| **Frontend** | Next.js 14 + Bun | Premium UX with server-side rendering and optimistic UI. |
+| **Cache & Broker** | Redis 7 | Feed response caching, session store, and Celery broker. |
+| **Task Queue** | Celery | Distributed background processing for scraping and LLM ranking. |
+| **Database** | PostgreSQL 17 | Relational storage with Alembic migration management. |
+| **Monitoring** | Flower + Sentry | Task tracking dashboard and production error reporting. |
+| **DevOps** | Docker + Husky | Containerized services and conventional commit enforcement. |
 
-- **Intelligent Curation**: AI-powered agents rank and filter news based on user interests
-- **Multi-Source Integration**: Aggregates content from YouTube, Anthropic, OpenAI, and custom sources
-- **Personalized Delivery**: Sends tailored digests via email at user-specified intervals
-- **Real-time Processing**: Event-driven architecture with background workers for continuous signal ingestion
+## 🏗️ Technical Pipeline
 
-## Architecture
+1. **Extraction**: Distributed workers scrape signals from YouTube (RSS + Transcripts) and Technical Research sites.
+2. **Persistence**: Signals are normalized and stored in PostgreSQL with unique content hashing.
+3. **Caching**: Frequent feed requests are served via Redis (<1ms latency) to support high-scale traffic.
+4. **Semantic Ranking**: The **AI Curator Agent** (Llama 3.3) performs persona-aware batch ranking for every user.
+5. **Delivery**: Curated digests are dispatched via an asynchronous email engine.
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **Backend API** | FastAPI (Python 3.11) | RESTful API with async processing |
-| **Frontend** | Next.js 14 + React 18 + TypeScript | Modern SPA with server components |
-| **Database** | PostgreSQL | Persistent data storage |
-| **State Management** | React Query + Zustand | Server and client state orchestration |
-| **Styling** | Tailwind CSS | Utility-first CSS framework |
-| **HTTP Transport** | Axios | Client-side HTTP with token rotation |
-| **Containerization** | Docker + Docker Compose | Development and production deployment |
-
-## Quick Start
+## 🛠️ Quick Start
 
 ### Prerequisites
 
-- Python 3.11+
-- Node.js 18+
+- [Bun](https://bun.sh/) (for Frontend & Root tools)
+- [uv](https://github.com/astral-sh/uv) (for Backend dependency management)
 - Docker & Docker Compose
-- PostgreSQL 15+ (or use Docker)
 
-### Local Development
-
-```bash
-# Clone repository
-git clone https://github.com/r0hansng/ai-news-aggregator.git
-cd ai-news-aggregator
-
-# Setup environment
-cp .env.example .env
-# Edit .env with your API keys
-
-# Start services with Docker
-docker-compose up -d
-
-# Backend setup
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-make dev
-
-# Frontend setup (new terminal)
-cd frontend
-npm install
-npm run dev
-```
-
-Access the application at `http://localhost:3000`
-
-## Project Structure
-
-```
-ai-news-aggregator/
-├── backend/                    # Python FastAPI service
-│   ├── cmd/                   # CLI commands and workers
-│   ├── features/              # Domain-driven features
-│   │   ├── digests/          # Signal digestion and curation
-│   │   ├── signals/          # Content collection and processing
-│   │   └── users/            # User management
-│   └── infra/                # Infrastructure layer
-├── frontend/                  # Next.js application
-│   ├── src/
-│   │   ├── app/              # Next.js app structure
-│   │   ├── core/             # API client and state
-│   │   ├── features/         # Feature modules
-│   │   └── shared/           # Reusable components
-│   └── docs/                 # Frontend documentation
-├── docker/                    # Container definitions
-├── infra/                     # Infrastructure configs
-└── docs/                      # Project documentation
-```
-
-## Documentation
-
-- **[Backend Architecture](docs/BACKEND.md)** - API design, database schema, and services
-- **[Frontend Architecture](docs/FRONTEND.md)** - Component structure, state management, and patterns
-
-## Key Features
-
-### Backend
-
-- Multi-agent orchestration (Curator, Digest, Email agents)
-- Real-time signal processing from multiple sources
-- Pub/Sub pattern for request queuing and token refresh
-- Comprehensive error handling and logging
-- Database migrations with Alembic
-
-### Frontend
-
-- Server-to-Client sync for instant UI updates
-- Optimistic updates with rollback capability
-- Staggered animations for smooth UX
-- WCAG AA compliant accessible components
-- Progressive disclosure in multi-step forms
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/auth/login` | User authentication |
-| POST | `/api/v1/auth/onboard` | User registration |
-| GET | `/api/v1/digests/latest` | Fetch curated signals |
-| POST | `/api/v1/digests/{id}/feedback` | Submit signal feedback |
-| GET | `/api/v1/signals/resolve` | Resolve YouTube channels |
-| PUT | `/api/v1/signals/sources` | Update user interests |
-
-## Development
-
-### Running Tests
+### Deployment (Development)
 
 ```bash
-# Backend tests
-cd backend
-pytest
+# 1. Provision Infrastructure (Postgres, Redis, pgAdmin, Flower)
+make db-up
 
-# Frontend tests
-cd frontend
-npm run test
+# 2. Setup Database Schema (Alembic)
+make db-init
+
+# 3. Start Backend API
+# In production, this uses Gunicorn/Uvicorn workers
+cd backend && uv run uvicorn backend.cmd.api:app --reload
+
+# 4. Start Frontend
+make fe-dev
 ```
 
-### Code Quality
+Access **Flower Dashboard** at `http://localhost:5555` to monitor background tasks.
+
+## 📈 Scalability Features
+
+- **Horizontal Scaling**: Backend workers and API instances can be scaled independently.
+- **Rate Limiting**: Global API protection via `slowapi` to prevent resource exhaustion.
+- **Failover**: LLM ranking includes automatic retry logic and "graceful degradation" fallbacks.
+- **Optimized Caching**: Redis-backed feed caching with 60s TTL and event-driven invalidation.
+
+## 🤝 Contribution & Standards
+
+We enforce **Conventional Commits** using Husky and Commitizen.
 
 ```bash
-# Backend linting
-cd backend
-make lint
-
-# Frontend linting
-cd frontend
-npm run lint
+# To commit changes, use the interactive prompt:
+git add .
+bun run commit  # Triggers the conventional commit wizard
 ```
 
-### Building for Production
+## 📜 Documentation
 
-```bash
-# Backend
-cd backend
-docker build -f ../docker/Dockerfile.backend -t ai-news-aggregator-backend .
-
-# Frontend
-cd frontend
-npm run build
-docker build -f ../docker/Dockerfile.frontend -t ai-news-aggregator-frontend .
-```
-
-## Environment Variables
-
-See `.env.example` for complete configuration:
-
-| Variable | Type | Description |
-|----------|------|-------------|
-| `GROQ_API_KEY` | string | Groq API key for LLM access |
-| `MY_EMAIL` | string | Sender email for digests |
-| `APP_PASSWORD` | string | Email app password |
-| `POSTGRES_*` | string | Database credentials |
-
-## Performance
-
-| Metric | Target | Current |
-|--------|--------|---------|
-| API Response Time | <200ms | ~150ms |
-| Page Load Time | <1s | ~800ms |
-| Feed Polling Interval | 60s | Configurable |
-| Email Delivery | <30s | ~10-20s |
-
-## Contributing
-
-1. Create a feature branch: `git checkout -b feat/your-feature`
-2. Follow conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
-3. Submit a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For issues and questions, please open a GitHub issue or contact the development team.
-
-## Acknowledgments
-
-Built with modern web technologies and best practices for scalability, maintainability, and developer experience.
+- **[Architecture Deep-Dive](docs/ARCHITECTURE.md)** - Logic flow and system design.
+- **[API Reference](backend/README.md)** - Detailed endpoint documentation.
+- **[Frontend Guide](frontend/README.md)** - Component patterns and state management.
 
 ---
 
-**Made with focus on production-grade architecture and user experience.**
+**Built with focus on production-grade resilience and sub-second user experience.**

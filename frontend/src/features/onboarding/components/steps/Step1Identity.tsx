@@ -4,7 +4,7 @@ import { useFormContext } from 'react-hook-form';
 import { Input } from '@/shared/components/ui/Input';
 import { OnboardingFormValues } from '../types';
 
-export function Step1Identity() {
+export default function Step1Identity() {
   const { register, formState: { errors } } = useFormContext<OnboardingFormValues>();
   const sectionTitle = "text-lg font-serif font-medium text-white mb-6";
 

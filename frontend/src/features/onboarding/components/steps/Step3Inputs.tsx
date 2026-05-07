@@ -5,10 +5,10 @@ import { useFormContext, useFieldArray } from 'react-hook-form';
 import { Plus, X, Search, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { OnboardingFormValues } from '../types';
-import { signalsService } from '@/lib/api';
+import { signalsApi } from '@/features/signals/api';
 import { Loader } from '@/shared/components/ui/Loader';
 
-export function Step3Inputs() {
+export default function Step3Inputs() {
   const { register, control, setValue, getValues } = useFormContext<OnboardingFormValues>();
   const sectionTitle = "text-lg font-serif font-medium text-white mb-6";
   const [resolving, setResolving] = useState<Record<number, boolean>>({});
@@ -40,7 +40,7 @@ export function Step3Inputs() {
     setResolveError(prev => ({ ...prev, [index]: '' }));
     
     try {
-      const data = await signalsService.resolveChannel(query);
+      const data = await signalsApi.resolveYouTubeChannel(query);
       setValue(`youtubeChannels.${index}.id`, data.channel_id);
       setValue(`youtubeChannels.${index}.name`, data.display_name);
       setValue(`youtubeChannels.${index}.handle`, data.handle || query);

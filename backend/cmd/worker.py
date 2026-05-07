@@ -1,23 +1,24 @@
-from typing import Optional, Union, List, Dict, Any
+
 """
 Background Ingestion Worker
 ===========================
 
-This script handles the 'Scraping Phase' of the pipeline. It fetches the latest 
-raw data from YouTube, OpenAI, and Anthropic blogs and stores them as signals.
+This module implements the 'Extraction' phase of our ETL pipeline.
+It handles high-volume data collection from heterogeneous sources
+(YouTube, OpenAI, Anthropic) and normalizes them into 'Signals'.
 
-Execution:
-    $ python -m app.cmd.worker
-
-Note: This worker is typically triggered by the Daily Pipeline or a Cron job.
+Performance Rationale:
+----------------------
+This worker is designed to be idempotent. It uses 'Bulk Deduplication'
+to ensure that repeated runs do not result in duplicate database records,
+allowing for frequent scheduled executions.
 """
-from typing import Optional, Union, List, Dict
+from backend.config import YOUTUBE_CHANNELS
 from backend.features.signals.repository import SignalRepository
 from backend.features.signals.scrapers.anthropic import AnthropicScraper
 from backend.features.signals.scrapers.openai import OpenAIScraper
 from backend.features.signals.scrapers.youtube import YouTubeScraper
 from backend.features.users.repository import UserRepository
-from backend.config import YOUTUBE_CHANNELS
 
 
 def run_scrapers(hours=24):
@@ -48,15 +49,17 @@ def run_scrapers(hours=24):
         videos = youtube_scraper.get_latest_videos(channel_id, hours=hours)
         youtube_videos.extend(videos)
         for v in videos:
-            video_dicts.append({
-                "video_id": v.video_id,
-                "title": v.title,
-                "url": v.url,
-                "channel_id": channel_id,
-                "published_at": v.published_at,
-                "description": v.description,
-                "transcript": v.transcript
-            })
+            video_dicts.append(
+                {
+                    "video_id": v.video_id,
+                    "title": v.title,
+                    "url": v.url,
+                    "channel_id": channel_id,
+                    "published_at": v.published_at,
+                    "description": v.description,
+                    "transcript": v.transcript,
+                }
+            )
 
     openai_articles = openai_scraper.get_articles(hours=hours)
     anthropic_articles = anthropic_scraper.get_articles(hours=hours)
@@ -65,24 +68,34 @@ def run_scrapers(hours=24):
         signal_repo.bulk_create_youtube_videos(video_dicts)
 
     if openai_articles:
-        signal_repo.bulk_create_openai_articles([{
-            "guid": a.guid,
-            "title": a.title,
-            "url": a.url,
-            "published_at": a.published_at,
-            "description": a.description,
-            "category": a.category
-        } for a in openai_articles])
+        signal_repo.bulk_create_openai_articles(
+            [
+                {
+                    "guid": a.guid,
+                    "title": a.title,
+                    "url": a.url,
+                    "published_at": a.published_at,
+                    "description": a.description,
+                    "category": a.category,
+                }
+                for a in openai_articles
+            ]
+        )
 
     if anthropic_articles:
-        signal_repo.bulk_create_anthropic_articles([{
-            "guid": a.guid,
-            "title": a.title,
-            "url": a.url,
-            "published_at": a.published_at,
-            "description": a.description,
-            "category": a.category
-        } for a in anthropic_articles])
+        signal_repo.bulk_create_anthropic_articles(
+            [
+                {
+                    "guid": a.guid,
+                    "title": a.title,
+                    "url": a.url,
+                    "published_at": a.published_at,
+                    "description": a.description,
+                    "category": a.category,
+                }
+                for a in anthropic_articles
+            ]
+        )
 
     return {
         "youtube": youtube_videos,
@@ -90,9 +103,9 @@ def run_scrapers(hours=24):
         "anthropic": anthropic_articles,
     }
 
+
 if __name__ == "__main__":
     results = run_scrapers(hours=24)
     print(f"YouTube videos: {len(results['youtube'])}")
     print(f"OpenAI articles: {len(results['openai'])}")
     print(f"Anthropic articles: {len(results['anthropic'])}")
-

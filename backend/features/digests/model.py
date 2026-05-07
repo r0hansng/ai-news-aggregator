@@ -1,4 +1,16 @@
-from typing import Optional, Union, List, Dict, Any
+"""
+Digest Domain Models
+====================
+
+This module defines the 'Digest' entity, which represents a curated, 
+AI-ranked, and summarized technical news item tailored for a specific user.
+
+Rationale:
+Digests are the final output of our semantic pipeline. They link back to
+the original signals but contain unique AI-generated summaries and 
+relevance rankings.
+"""
+
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, String, Text

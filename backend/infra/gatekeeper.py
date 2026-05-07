@@ -1,39 +1,52 @@
-import os
+"""
+Gatekeeper Infrastructure Module
+===============================
+
+This module provides a centralized feature-flagging system (Gatekeeper)
+to enable safe rollouts and environment-specific configuration overrides.
+
+Rationale:
+At Meta-scale, we never 'hard-launch' features. We use Gatekeepers to toggle
+functionality dynamically. This implementation provides a Pythonic abstraction
+for that pattern.
+"""
+
 import logging
-from typing import Dict, Any
+from typing import Dict
+import os
 
 logger = logging.getLogger(__name__)
+
 
 class Gatekeeper:
     """
     Standardized Feature-Flagging (GK) utility.
-    
-    Inspired by Meta's Gatekeeper system, this utility allows for 'Safe Rollouts' 
+
+    Inspired by Meta's Gatekeeper system, this utility allows for 'Safe Rollouts'
     and 'Dark Launches' of new features without requiring code deployments.
-    
+
     Resolution Hierarchy:
     1. Environment Variables (`GK_FEATURE_NAME`) - Highest priority (Infrastructure override).
     2. Internal Registry (`_flags`) - Default configuration (Code-defined state).
-    
+
     Usage:
         if gk.is_enabled("NEW_ALGORITHM"):
             do_new_thing()
     """
-    
+
     _flags: Dict[str, bool] = {
-        "ENABLE_AGENTIC_DIGESTS": True,   # Use LLM agents for curation
-        "STRICT_RESPONSE_VALIDATION": True, # Enforce Pydantic models in responses
-        "USE_EXPERIMENTAL_RANKER": False,   # Experimental ranking algorithm
-        "DEBUG_METADATA_EXPOSURE": False,   # Expose internal IDs in API
+        "ENABLE_AGENTIC_DIGESTS": True,  # Use LLM agents for curation
+        "STRICT_RESPONSE_VALIDATION": True,  # Enforce Pydantic models in responses
+        "USE_EXPERIMENTAL_RANKER": False,  # Experimental ranking algorithm
+        "DEBUG_METADATA_EXPOSURE": False,  # Expose internal IDs in API
     }
-    
+
     @classmethod
     def is_enabled(cls, feature_name: str, default: bool = False) -> bool:
 
         env_val = os.getenv(f"GK_{feature_name}")
         if env_val is not None:
             return env_val.lower() in ("true", "1", "yes")
-            
 
         return cls._flags.get(feature_name, default)
 

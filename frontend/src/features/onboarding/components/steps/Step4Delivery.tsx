@@ -4,7 +4,7 @@ import { useFormContext } from 'react-hook-form';
 import { Select } from '@/shared/components/ui/Select';
 import { OnboardingFormValues } from '../types';
 
-export function Step4Delivery() {
+export default function Step4Delivery() {
   const { register } = useFormContext<OnboardingFormValues>();
   const sectionTitle = "text-lg font-serif font-medium text-white mb-6";
 

@@ -1,4 +1,3 @@
-from typing import Optional, Union, List, Dict, Any
 from backend.features.signals.repository import SignalRepository
 from backend.features.signals.scrapers.anthropic import AnthropicScraper
 from backend.features.signals.scrapers.openai import OpenAIScraper

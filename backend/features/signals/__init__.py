@@ -1,4 +1,5 @@
-from typing import Optional, Union, List, Dict, Any
+from typing import Any, Dict, List, Optional, Union
+
 """
 Signals Feature Module
 ======================

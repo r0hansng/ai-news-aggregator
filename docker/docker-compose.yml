@@ -4,16 +4,28 @@
 # Architecture:
 # - Microservices: Frontend (Bun/Next.js) & Backend (FastAPI).
 # - Storage: PostgreSQL 17 (Relational Store).
-# - Management: pgAdmin (Database Inspection).
-# 
-# Usage:
-# - Up:   docker compose -f docker/docker-compose.yml up -d
-# - Down: docker compose -f docker/docker-compose.yml down
+# - Cache & Broker: Redis 7.
+# - Background: Celery Workers (Distributed Processing).
+# - Monitoring: Flower (Task Dashboard).
 # ==============================================================================
 
 name: ai-news-aggregator
 
 services:
+  # ----------------------------------------------------------------------------
+  # Cache Service (Redis)
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: ai-news-aggregator-cache
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   # ----------------------------------------------------------------------------
   # Database Service (PostgreSQL)
   # ----------------------------------------------------------------------------
@@ -87,10 +99,54 @@ services:
       - ../backend:/app/backend
     environment:
       - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
     # Entrypoint uses the modular backend package.
     command: uvicorn backend.cmd.api:app --host 0.0.0.0 --port 8000 --reload --reload-dir backend
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ----------------------------------------------------------------------------
+  # Celery Worker (Distributed Processing)
+  # ----------------------------------------------------------------------------
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: ai-news-aggregator-worker
+    env_file:
+      - ../.env
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+    volumes:
+      - ../backend:/app/backend
+    command: celery -A backend.infra.tasks.celery_app worker --loglevel=info --concurrency=4
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ----------------------------------------------------------------------------
+  # Flower (Task Monitoring Dashboard)
+  # ----------------------------------------------------------------------------
+  flower:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: ai-news-aggregator-flower
+    ports:
+      - "5555:5555"
+    env_file:
+      - ../.env
+    environment:
+      - REDIS_HOST=redis
+    command: celery -A backend.infra.tasks.celery_app flower --port=5555
+    depends_on:
+      redis:
         condition: service_healthy
 
 volumes:

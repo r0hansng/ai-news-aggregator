@@ -7,7 +7,7 @@
 #    across development and production builds.
 # ==============================================================================
 
-FROM oven/bun:1.1-alpine
+FROM oven/bun:1.2-alpine
 
 WORKDIR /app/frontend
 
@@ -16,7 +16,7 @@ WORKDIR /app/frontend
 # ------------------------------------------------------------------------------
 # Layer Caching: We copy package manifests separately to ensure that 
 # source changes (e.g. page edits) don't invalidate the lockfile layer.
-COPY frontend/package.json frontend/bun.lockb ./
+COPY frontend/package.json frontend/bun.lock ./
 RUN bun install --frozen-lockfile
 
 # ------------------------------------------------------------------------------

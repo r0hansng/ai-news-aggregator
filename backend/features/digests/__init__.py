@@ -1,9 +1,10 @@
-from typing import Optional, Union, List, Dict, Any
+from typing import Any, Dict, List, Optional, Union
+
 """
 Digests Feature Module
 ======================
 
-This module is the "Brain" of the application. It transforms raw signals into 
+This module is the "Brain" of the application. It transforms raw signals into
 personalized, AI-curated news summaries.
 
 Key Functions:

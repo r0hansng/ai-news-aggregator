@@ -1,3 +1,10 @@
+/**
+ * @file Root Layout
+ * @module app/layout
+ * @description The global layout wrapper for the application. Configures fonts,
+ * global providers (React Query), and document-level metadata.
+ */
+
 import type { Metadata } from "next";
 import { Inter, Newsreader } from "next/font/google";
 import "./globals.css";

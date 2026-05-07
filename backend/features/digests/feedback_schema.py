@@ -1,12 +1,17 @@
-from typing import Optional, Union, List, Dict, Any
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
 class FeedbackCreate(BaseModel):
-    rating: str = Field(..., example="relevant", description="The rating for the digest (e.g., relevant, irrelevant, too_basic, too_advanced)")
+    rating: str = Field(
+        ...,
+        example="relevant",
+        description="The rating for the digest (e.g., relevant, irrelevant, too_basic, too_advanced)",
+    )
     comment: Optional[str] = None
+
 
 class FeedbackResponse(BaseModel):
     id: str

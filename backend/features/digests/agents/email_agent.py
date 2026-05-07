@@ -1,7 +1,7 @@
-from typing import Optional, Union, List, Dict, Any
 import json
 import os
 from datetime import datetime
+from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -28,7 +28,7 @@ class ArticleDetail(BaseModel):
 
 class EmailDigest(BaseModel):
     intro: EmailIntro
-    articles: list[ArticleDetail]
+    articles: List[ArticleDetail]
     total_ranked: int
     top_n: int
 
@@ -48,31 +48,33 @@ Return a JSON object with:
 
 
 class EmailAgent:
-    def __init__(self, user_profile: dict):
+    def __init__(self, user_profile: Dict):
         self.client = OpenAI(
             api_key=os.getenv("GROQ_API_KEY"),
             base_url="https://api.groq.com/openai/v1",
         )
         # We use Llama 3.1 8B for lightning-fast text generation of the email intro.
-        self.model = "llama-3.1-8b-instant" 
+        self.model = "llama-3.1-8b-instant"
         self.user = user_profile
 
-    def _make_intro(self, articles: list) -> EmailIntro:
+    def _make_intro(self, articles: List) -> EmailIntro:
         if not articles:
             today = datetime.now().strftime("%B %d, %Y")
             return EmailIntro(
                 greeting=f"Hey {self.user['name']}, here's your AI digest for {today}.",
-                introduction="Nothing new to report today."
+                introduction="Nothing new to report today.",
             )
 
         top = articles[:10]
         today = datetime.now().strftime("%B %d, %Y")
-        titles = "\n".join([
-            f"{i+1}. {a.title if hasattr(a, 'title') else a.get('title', '')} ({a.relevance_score if hasattr(a, 'relevance_score') else a.get('relevance_score', 0):.1f}/10)"
-            for i, a in enumerate(top)
-        ])
+        titles = "\n".join(
+            [
+                f"{i + 1}. {a.title if hasattr(a, 'title') else a.get('title', '')} ({a.relevance_score if hasattr(a, 'relevance_score') else a.get('relevance_score', 0):.1f}/10)"
+                for i, a in enumerate(top)
+            ]
+        )
 
-        prompt = f"""Write an intro for {self.user['name']}'s digest on {today}.
+        prompt = f"""Write an intro for {self.user["name"]}'s digest on {today}.
 
 Top articles:
 {titles}"""
@@ -102,10 +104,12 @@ Top articles:
             today = datetime.now().strftime("%B %d, %Y")
             return EmailIntro(
                 greeting=f"Hey {self.user['name']}, here's your AI digest for {today}.",
-                introduction="Here are your top AI stories for today."
+                introduction="Here are your top AI stories for today.",
             )
 
-    def build_digest(self, ranked_articles: list[ArticleDetail], total_ranked: int, limit: int = 10) -> EmailDigest:
+    def build_digest(
+        self, ranked_articles: List[ArticleDetail], total_ranked: int, limit: int = 10
+    ) -> EmailDigest:
         top = ranked_articles[:limit]
         intro = self._make_intro(top)
         return EmailDigest(intro=intro, articles=top, total_ranked=total_ranked, top_n=limit)

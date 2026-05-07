@@ -1,15 +1,25 @@
-from typing import Optional, Union, List, Dict, Any
+"""
+Anthropic Signal Normalization
+==============================
+
+This module implements the 'Transformation' phase of the ETL pipeline for 
+Anthropic blog articles. It converts raw URLs into high-integrity technical 
+markdown using the Docling engine.
+"""
+
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
+from typing import Dict, Optional
+
 from backend.features.signals.repository import SignalRepository
 from backend.features.signals.scrapers.anthropic import AnthropicScraper
 
 
-def process_anthropic_markdown(limit: Optional[int] = None) -> dict:
+def process_anthropic_markdown(limit: Optional[int] = None) -> Dict:
     scraper = AnthropicScraper()
     repo = SignalRepository()
 
@@ -30,11 +40,7 @@ def process_anthropic_markdown(limit: Optional[int] = None) -> dict:
             print(f"Error processing article {article.guid}: {e}")
             continue
 
-    return {
-        "total": len(articles),
-        "processed": processed,
-        "failed": failed
-    }
+    return {"total": len(articles), "processed": processed, "failed": failed}
 
 
 if __name__ == "__main__":
